@@ -584,8 +584,10 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
   background: var(--accent);
   border-radius: var(--radius-pill);
   box-shadow: 0 4px 12px rgba(59, 91, 245, 0.25);
-  transition: transform 220ms cubic-bezier(.2,.8,.2,1), width 220ms cubic-bezier(.2,.8,.2,1);
   pointer-events: none;
+}
+.segmented[data-pill-ready]::before, .choice-grid[data-pill-ready]::before {
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1), width 220ms cubic-bezier(.2,.8,.2,1);
 }
 
 details { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
@@ -624,6 +626,8 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   .nav-btn[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
   .nav-btn-fab { transform: none; justify-content: center; padding: 10px 16px; background: var(--accent); color: #fff; box-shadow: 0 6px 16px rgba(59, 91, 245, 0.25); }
   .nav-btn-fab .nav-icon { width: 24px; height: 24px; margin-top: 0; background: transparent; color: #fff; box-shadow: none; }
+  .nav-btn-fab:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent); }
+  .nav-btn-fab:focus-visible .nav-icon { box-shadow: none; }
   .nav-btn-fab:active { transform: scale(.96); }
   .nav-btn-fab[aria-current="page"] { background: var(--accent); color: #fff; }
   .nav-btn-fab[aria-current="page"] .nav-icon { background: transparent; transform: none; }
@@ -637,7 +641,7 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
-  .segmented::before, .choice-grid::before { transform: none !important; left: var(--pill-x, 0) !important; }
+  .segmented::before, .choice-grid::before { transform: none !important; left: var(--pill-x, 0) !important; transition: none !important; }
   .nav-btn[aria-current="page"] .nav-icon { transform: none !important; }
   .btn:active, .choice:active, .segmented button:active, .nav-btn:active, .day-head-btn:active, .chip button:active, .nav-btn-fab:active .nav-icon { transform: none !important; }
 }
