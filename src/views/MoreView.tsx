@@ -6,6 +6,7 @@ import { toCsv } from '../domain/csv.ts';
 import type { Medication, Reading } from '../domain/types.ts';
 import { ShareBackupButton } from '../components/ShareBackup.tsx';
 import { useLog } from '../store/LogProvider.tsx';
+import { SYNC_WEBHOOK_SCRIPT_TEMPLATE, testWebhookConnection } from '../domain/sync.ts';
 
 const MAX_IMPORT_BYTES = 1_500_000;
 
@@ -28,6 +29,69 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
   const [medMessage, setMedMessage] = useState<string | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
   const [clearMessage, setClearMessage] = useState<string | null>(null);
+  const [webhookUrl, setWebhookUrl] = useState(log.syncConfig.webhookUrl);
+  const [autoSync, setAutoSync] = useState(log.syncConfig.autoSync);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [showScriptHelp, setShowScriptHelp] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
+
+
+  async function handleSaveSync() {
+    log.updateSyncConfig({ webhookUrl: webhookUrl.trim(), autoSync });
+    setSyncStatusMsg('Sync ဆက်တင် သိမ်းဆည်းပြီးပါပြီ။');
+    setTimeout(() => setSyncStatusMsg(null), 4000);
+  }
+
+  async function handleTestWebhook() {
+    if (!webhookUrl.trim()) {
+      setSyncStatusMsg('Webhook URL ထည့်ပါ');
+      return;
+    }
+    setSyncBusy(true);
+    setSyncStatusMsg('စမ်းသပ်နေသည်…');
+    const res = await testWebhookConnection(webhookUrl.trim());
+    setSyncBusy(false);
+    if (res.ok) {
+      setSyncStatusMsg('✔ Google Sheet သို့ ချိတ်ဆက်မှု အောင်မြင်ပါသည်!');
+    } else {
+      setSyncStatusMsg(`❌ ချိတ်ဆက်၍မရပါ: ${res.error ?? 'Unknown error'}`);
+    }
+  }
+
+  async function handleSyncAllNow() {
+    if (!webhookUrl.trim()) {
+      setSyncStatusMsg('Webhook URL ထည့်ပါ');
+      return;
+    }
+    setSyncBusy(true);
+    setSyncStatusMsg('ဒေတာများ ပို့နေသည်…');
+    const res = await log.syncAllNow();
+    setSyncBusy(false);
+    if (res.ok) {
+      setSyncStatusMsg(`✔ မှတ်တမ်း ${res.count} ခု Google Sheet သို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ!`);
+    } else {
+      setSyncStatusMsg(`❌ ပို့၍မရပါ: ${res.error ?? 'အင်တာနက် သို့မဟုတ် Webhook စစ်ပါ'}`);
+    }
+  }
+
+  function copyScriptCode() {
+    navigator.clipboard?.writeText(SYNC_WEBHOOK_SCRIPT_TEMPLATE);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 3000);
+  }
+
+  function sendEmailReport() {
+    const emailTo = 'khinelintun91@gmail.com';
+    const subject = encodeURIComponent('အဖေ့သွေးမှတ်တမ်း အနှစ်ချုပ်');
+    const recentReadings = log.readings.slice(-10).map((r) => {
+      const time = new Date(r.recordedAt).toLocaleString('my-MM', { timeZone: 'Asia/Yangon' });
+      const val = r.type === 'glucose' ? `${r.glucoseValue} ${r.glucoseUnit}` : `${r.systolic}/${r.diastolic} mmHg (HR: ${r.pulse || '-'})`;
+      return `- ${time}: ${val} (${r.notes || 'မှတ်ချက်မရှိ'})`;
+    }).join('\n');
+    const body = encodeURIComponent(`အဖေ့ကျန်းမာရေး မှတ်တမ်း နောက်ဆုံးရလဒ်များ:\n\n${recentReadings}\n\nစုစုပေါင်း မှတ်တမ်း: ${log.readings.length} ခု`);
+    window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+  }
 
   function download(filename: string, content: string, mime: string) {
     const blob = new Blob([content], { type: mime });
@@ -291,6 +355,115 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
           <button type="button" className="btn btn-quiet" onClick={() => download('thwaymattam-raw.txt', log.rawBackup ?? '', 'text/plain')}><DownloadIcon />ပျက်နေသောစာသား ထုတ်မည်</button>
         ) : null}
       </section>
+      
+      <section className="card stack">
+        <div className="more-head">
+          <span className="icon-well icon-well-lg" aria-hidden="true"><CloudIcon /></span>
+          <h3>Google Sheets Auto-Sync (Cloud သိမ်းဆည်းခြင်း)</h3>
+        </div>
+        <p className="more-explainer">
+          အင်တာနက်ရရှိချိန်တိုင်း ဖုန်းမှ ဒေတာများကို မိမိ၏ Private Google Sheet သို့ အလိုအလျောက် ပို့ပေးပါသည်။
+          ဖုန်းပျက်ခြင်း၊ Browser Cache ရှင်းမိခြင်းများ ဖြစ်ပေါ်ပါက Google Sheet ထဲတွင် မှတ်တမ်းများ အပြည့်အစုံ ကျန်ရှိနေမည်ဖြစ်ပါသည်။
+        </p>
+
+        <label className="field">
+          Google Apps Script Webhook URL
+          <input
+            type="url"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/.../exec"
+          />
+        </label>
+
+        <label className="replace-row">
+          <input
+            type="checkbox"
+            checked={autoSync}
+            onChange={(e) => setAutoSync(e.target.checked)}
+          />
+          <span>တိုင်းတာမှုအသစ် ထည့်ပြီးတိုင်း Google Sheet သို့ အလိုအလျောက် ပို့မည် (Auto-Sync)</span>
+        </label>
+
+        <div className="row">
+          <button type="button" className="btn btn-primary" onClick={handleSaveSync}>
+            ဆက်တင်သိမ်းမည်
+          </button>
+          <button
+            type="button"
+            className="btn btn-quiet"
+            disabled={syncBusy || !webhookUrl.trim()}
+            onClick={handleTestWebhook}
+          >
+            {syncBusy ? 'စစ်ဆေးနေ…' : 'ချိတ်ဆက်မှု စမ်းသပ်မည်'}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-quiet btn-block"
+          disabled={syncBusy || !webhookUrl.trim() || log.readings.length === 0}
+          onClick={handleSyncAllNow}
+        >
+          ☁ ဒေတာအားလုံး ({log.readings.length} ခု) ကို Google Sheet သို့ အခုပို့မည်
+        </button>
+
+        {syncStatusMsg ? (
+          <p className="banner info" role="status">{syncStatusMsg}</p>
+        ) : null}
+
+        <button
+          type="button"
+          className="btn btn-quiet btn-small"
+          onClick={() => setShowScriptHelp(!showScriptHelp)}
+        >
+          {showScriptHelp ? '▲ Google Sheet သတ်မှတ်ပုံ ပိတ်မည်' : '▼ Google Sheet သတ်မှတ်ပုံ ညွှန်ကြားချက် ကြည့်မည်'}
+        </button>
+
+        {showScriptHelp ? (
+          <div className="stack help-box">
+            <h4 style={{ margin: '8px 0 4px', fontSize: '15px' }}>Google Sheets တွင် Webhook ပြုလုပ်နည်း (၃ မိနစ်)</h4>
+            <ol className="help-steps" style={{ paddingLeft: '20px', lineHeight: '1.6', fontSize: '13px' }}>
+              <li>မိမိ Google Drive တွင် Google Sheet အသစ်တစ်ခု ဖွင့်ပါ။</li>
+              <li>အပေါ် Menu မှ <strong>Extensions &gt; Apps Script</strong> ကို နှိပ်ပါ။</li>
+              <li>ရှိနေသော ကုဒ်များကို ဖျက်ပြီး အောက်ပါ ကုဒ်ကို ကူးထည့်ပါ:</li>
+            </ol>
+            <div style={{ position: 'relative' }}>
+              <pre className="script-code-block" style={{ background: '#f1f5f9', padding: '12px', borderRadius: '12px', fontSize: '12px', overflowX: 'auto', maxHeight: '180px' }}>
+                {SYNC_WEBHOOK_SCRIPT_TEMPLATE}
+              </pre>
+              <button
+                type="button"
+                className="btn btn-small btn-primary"
+                style={{ marginTop: '8px' }}
+                onClick={copyScriptCode}
+              >
+                {copiedScript ? '✔ ကူးယူပြီးပါပြီ' : '📋 ကုဒ်အားလုံး ကူးမည်'}
+              </button>
+            </div>
+            <ol start={4} className="help-steps" style={{ paddingLeft: '20px', lineHeight: '1.6', fontSize: '13px' }}>
+              <li>ညာဘက်အပေါ်ရှိ <strong>Deploy &gt; New deployment</strong> ကို နှိပ်ပါ။</li>
+              <li>Select type ဘေးရှိ ဂီယာပုံစံမှ <strong>Web app</strong> ကို ရွေးပါ။</li>
+              <li><strong>Who has access: Anyone</strong> (အရေးကြီးသည်) ဟု ရွေးပြီး <strong>Deploy</strong> နှိပ်ပါ။</li>
+              <li>ရရှိလာသော Web app URL ကို ကူးယူပြီး အထက်ပါ ကွက်လပ်တွင် ထည့်ပါ။</li>
+            </ol>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="card stack">
+        <div className="more-head">
+          <span className="icon-well icon-well-lg" aria-hidden="true"><ShareIcon /></span>
+          <h3>Gmail သို့ အစီရင်ခံစာ ပို့ရန်</h3>
+        </div>
+        <p className="more-explainer">
+          အဖေ့သွေးမှတ်တမ်း နောက်ဆုံးအခြေအနေကို <strong>khinelintun91@gmail.com</strong> သို့ အီးမေးလ် ပေးပို့နိုင်ပါသည်။
+        </p>
+        <button type="button" className="btn btn-primary" onClick={sendEmailReport}>
+          ✉ Gmail ဖြင့် မှတ်တမ်းအနှစ်ချုပ် ပို့မည်
+        </button>
+      </section>
+
       <section className="card stack">
         <div className="more-head">
           <span className="icon-well icon-well-lg" aria-hidden="true"><WifiOffIcon /></span>

@@ -2,6 +2,15 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { applyMerge, mergeMedications } from '../domain/backup.ts';
 import { buildDemoStore, isStaleDemoSet } from '../domain/demo.ts';
 import { byteLength, interpretStorageEvent, loadStore, readRaw, replaceStore, saveStore, type StorageReason } from '../domain/storage.ts';
+import {
+  loadSyncConfig,
+  saveSyncConfig,
+  loadSyncStatuses,
+  setReadingSyncStatus,
+  postReadingsToWebhook,
+  type SyncConfig,
+  type SyncRecordStatus,
+} from '../domain/sync.ts';
 import { DEMO_STORAGE_KEY, PREF_KEY, STORAGE_KEY, type Medication, type Reading, type StoreData } from '../domain/types.ts';
 import { createId, emptyStore, issueMessage, validateMedication } from '../domain/validate.ts';
 
@@ -29,6 +38,12 @@ interface LogContextValue {
     incoming: { accepted: Reading[]; updates: Reading[]; medications?: Medication[] },
     mode: 'merge' | 'replace',
   ) => boolean;
+  // Google Sheets Sync
+  syncConfig: SyncConfig;
+  updateSyncConfig: (config: SyncConfig) => void;
+  syncStatuses: Record<string, SyncRecordStatus>;
+  syncAllNow: () => Promise<{ ok: boolean; count: number; error?: string }>;
+  syncSingleNow: (reading: Reading) => Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Rebuild a demo store that predates the generated 3-month rows. Demo room only. */
@@ -74,10 +89,17 @@ export function LogProvider({ children }: { children: ReactNode }) {
   const [loadError, setLoadError] = useState<'unavailable' | 'corrupt' | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [rawBackup, setRawBackup] = useState<string | null>(null);
+
+  // Sync state
+  const [syncConfig, setSyncConfigState] = useState<SyncConfig>(() => loadSyncConfig(storageOf()));
+  const [syncStatuses, setSyncStatusesState] = useState<Record<string, SyncRecordStatus>>(() => loadSyncStatuses(storageOf()));
+
   const dataRef = useRef(data);
   const keyRef = useRef(STORAGE_KEY);
+  const syncConfigRef = useRef(syncConfig);
   dataRef.current = data;
   keyRef.current = demo ? DEMO_STORAGE_KEY : STORAGE_KEY;
+  syncConfigRef.current = syncConfig;
 
   useEffect(() => {
     const storage = storageOf();
@@ -107,6 +129,8 @@ export function LogProvider({ children }: { children: ReactNode }) {
       setLoadError(loaded.reason);
       setRawBackup(readRaw(storage, key));
     }
+    setSyncConfigState(loadSyncConfig(storage));
+    setSyncStatusesState(loadSyncStatuses(storage));
     setHydrated(true);
   }, []);
 
@@ -130,6 +154,31 @@ export function LogProvider({ children }: { children: ReactNode }) {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, [hydrated]);
+
+  // Online listener to flush pending or failed syncs
+  useEffect(() => {
+    const handleOnline = () => {
+      const cfg = syncConfigRef.current;
+      if (!cfg.webhookUrl || !cfg.autoSync) return;
+      const statuses = loadSyncStatuses(storageOf());
+      const currentReadings = dataRef.current.readings;
+      const needSync = currentReadings.filter((r) => {
+        const s = statuses[r.id]?.status;
+        return s === 'pending' || s === 'failed';
+      });
+      if (needSync.length > 0) {
+        postReadingsToWebhook(cfg.webhookUrl, needSync).then((res) => {
+          const storage = storageOf();
+          needSync.forEach((r) => {
+            setReadingSyncStatus(r.id, res.ok ? 'synced' : 'failed', res.error, storage);
+          });
+          setSyncStatusesState(loadSyncStatuses(storage));
+        });
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
 
   function commit(mutate: (current: StoreData) => StoreData | null): boolean {
     const storage = storageOf();
@@ -162,6 +211,45 @@ export function LogProvider({ children }: { children: ReactNode }) {
     return false;
   }
 
+  // Trigger sync for a specific reading
+  async function triggerSingleSync(reading: Reading): Promise<{ ok: boolean; error?: string }> {
+    const cfg = syncConfigRef.current;
+    const storage = storageOf();
+    if (!cfg.webhookUrl) {
+      return { ok: false, error: 'Webhook URL မရှိပါ' };
+    }
+    setReadingSyncStatus(reading.id, 'pending', undefined, storage);
+    setSyncStatusesState(loadSyncStatuses(storage));
+
+    const res = await postReadingsToWebhook(cfg.webhookUrl, [reading]);
+    setReadingSyncStatus(reading.id, res.ok ? 'synced' : 'failed', res.error, storage);
+    setSyncStatusesState(loadSyncStatuses(storage));
+    return res;
+  }
+
+  // Sync all readings
+  async function syncAllNow(): Promise<{ ok: boolean; count: number; error?: string }> {
+    const cfg = syncConfigRef.current;
+    const storage = storageOf();
+    const currentReadings = dataRef.current.readings;
+    if (!cfg.webhookUrl) {
+      return { ok: false, count: 0, error: 'Webhook URL မထည့်ရသေးပါ' };
+    }
+    if (currentReadings.length === 0) {
+      return { ok: true, count: 0 };
+    }
+
+    currentReadings.forEach((r) => setReadingSyncStatus(r.id, 'pending', undefined, storage));
+    setSyncStatusesState(loadSyncStatuses(storage));
+
+    const res = await postReadingsToWebhook(cfg.webhookUrl, currentReadings);
+    currentReadings.forEach((r) => {
+      setReadingSyncStatus(r.id, res.ok ? 'synced' : 'failed', res.error, storage);
+    });
+    setSyncStatusesState(loadSyncStatuses(storage));
+    return { ok: res.ok, count: currentReadings.length, error: res.error };
+  }
+
   const api = useMemo<LogContextValue>(() => {
     const storage = storageOf();
     const raw = storage && hydrated ? readRaw(storage, demo ? DEMO_STORAGE_KEY : STORAGE_KEY) : rawBackup;
@@ -175,6 +263,14 @@ export function LogProvider({ children }: { children: ReactNode }) {
       clearSaveMessage: () => setSaveMessage(null),
       rawBackup: raw,
       byteSize: raw == null ? null : byteLength(raw),
+      syncConfig,
+      syncStatuses,
+      updateSyncConfig: (nextConfig) => {
+        saveSyncConfig(nextConfig, storageOf());
+        setSyncConfigState(nextConfig);
+      },
+      syncAllNow,
+      syncSingleNow: triggerSingleSync,
       setDemo: (on) => {
         const box = storageOf();
         if (!box) {
@@ -216,18 +312,34 @@ export function LogProvider({ children }: { children: ReactNode }) {
           setSaveMessage('ပျက်နေသောဒေတာကို ဖယ်ပြီး အသစ်စတင်ပြီးပါပြီ။');
         } else setSaveMessage(reasonText(replaced.reason));
       },
-      addReading: (reading) => commit((current) => ({ ...current, readings: [...current.readings, reading] })),
-      updateReading: (reading) =>
-        commit((current) => {
+      addReading: (reading) => {
+        const ok = commit((current) => ({ ...current, readings: [...current.readings, reading] }));
+        if (ok && syncConfigRef.current.webhookUrl && syncConfigRef.current.autoSync) {
+          triggerSingleSync(reading);
+        }
+        return ok;
+      },
+      updateReading: (reading) => {
+        const ok = commit((current) => {
           if (!current.readings.some((item) => item.id === reading.id)) return null;
           return { ...current, readings: current.readings.map((item) => (item.id === reading.id ? reading : item)) };
-        }),
+        });
+        if (ok && syncConfigRef.current.webhookUrl && syncConfigRef.current.autoSync) {
+          triggerSingleSync(reading);
+        }
+        return ok;
+      },
       deleteReading: (id) => commit((current) => ({ ...current, readings: current.readings.filter((item) => item.id !== id) })),
-      restoreReading: (reading) =>
-        commit((current) => {
+      restoreReading: (reading) => {
+        const ok = commit((current) => {
           if (current.readings.some((item) => item.id === reading.id)) return current;
           return { ...current, readings: [...current.readings, reading] };
-        }),
+        });
+        if (ok && syncConfigRef.current.webhookUrl && syncConfigRef.current.autoSync) {
+          triggerSingleSync(reading);
+        }
+        return ok;
+      },
       addMedication: (input) => {
         const stamp = new Date().toISOString();
         const parsed = validateMedication({ ...input, id: createId(), createdAt: stamp, updatedAt: stamp });
@@ -253,7 +365,7 @@ export function LogProvider({ children }: { children: ReactNode }) {
               : mergeMedications(current.medications, incoming.medications ?? []),
         })),
     };
-  }, [hydrated, demo, data, loadError, saveMessage, rawBackup]);
+  }, [hydrated, demo, data, loadError, saveMessage, rawBackup, syncConfig, syncStatuses]);
 
   return <LogContext.Provider value={api}>{children}</LogContext.Provider>;
 }

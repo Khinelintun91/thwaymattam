@@ -76,7 +76,7 @@ function PencilIcon() {
 }
 
 export function HistoryView({ onEdit, onDeleted }: { onEdit: (reading: Reading) => void; onDeleted: (reading: Reading) => void }) {
-  const { readings, deleteReading } = useLog();
+  const { readings, deleteReading, syncConfig, syncStatuses, syncSingleNow } = useLog();
   const [filter, setFilter] = useState<HistoryFilter>(EMPTY_FILTER);
   const [pending, setPending] = useState<Reading | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -175,6 +175,22 @@ export function HistoryView({ onEdit, onDeleted }: { onEdit: (reading: Reading) 
                         <div className="reading-row-value-col">
                           <strong className="reading-row-value">{readingValue(reading)}</strong>
                           {badgeText(reading, readings) ? <span className={`badge ${badgeFor(noticesFor(reading, readings))}`}>{badgeText(reading, readings)}</span> : null}
+                          {syncConfig.webhookUrl ? (
+                            syncStatuses[reading.id]?.status === 'synced' ? (
+                              <span className="sync-chip sync-synced" title="Google Sheet သို့ ရောက်ရှိပြီး">✔ Synced</span>
+                            ) : syncStatuses[reading.id]?.status === 'pending' ? (
+                              <span className="sync-chip sync-pending" title="Sync လုပ်ရန် စောင့်ဆိုင်းနေသည်">⏳ Pending</span>
+                            ) : syncStatuses[reading.id]?.status === 'failed' ? (
+                              <button
+                                type="button"
+                                className="sync-chip sync-failed"
+                                title="ပြန်ပို့ရန် နှိပ်ပါ"
+                                onClick={() => syncSingleNow(reading)}
+                              >
+                                ⚠ Retry
+                              </button>
+                            ) : null
+                          ) : null}
                         </div>
                         {notes ? <p className="muted reading-row-note">{notes}</p> : null}
                         <div className="row-actions">
