@@ -16,10 +16,10 @@ export const DAYPART_LABEL: Record<DayPart, string> = {
 };
 
 export const DAYPART_RANGE: Record<DayPart, string> = {
-  morning: '၀၅:၀၀–၁၁:၅၉',
-  afternoon: '၁၂:၀၀–၁၆:၅၉',
-  evening: '၁၇:၀၀–၂၀:၅၉',
-  night: '၂၁:၀၀–၀၄:၅၉',
+  morning: '၅:၀၀–၁၁:၅၉',
+  afternoon: '၁၂:၀၀–၄:၅၉',
+  evening: '၅:၀၀–၈:၅၉',
+  night: '၉:၀၀–၄:၅၉',
 };
 
 export const SYMPTOM_LABEL: Record<Symptom, string> = {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MEAL_CONTEXTS, type DayPart } from './types.ts';
-import { dateKey, dayPart, nowWallClock, rangoonOffsetMinutes, wallClockToIso, zonedParts } from './time.ts';
+import { dateKey, dayPart, formatTime12, nowWallClock, rangoonOffsetMinutes, wallClockToIso, zonedParts } from './time.ts';
 
 function at(date: string, time: string): Date {
   const iso = wallClockToIso(date, time);
@@ -27,6 +27,21 @@ describe('Asia/Rangoon clock', () => {
       ['21:00', 'night'],
     ];
     for (const [time, part] of cases) expect(dayPart(at('2026-11-09', time)), time).toBe(part);
+  });
+
+  it('formats wall times on a 12-hour clock with the day-part word', () => {
+    const cases: [string, string][] = [
+      ['07:30', '7:30 နံနက်'],
+      ['11:59', '11:59 နံနက်'],
+      ['12:00', '12:00 နေ့လယ်'],
+      ['13:40', '1:40 နေ့လယ်'],
+      ['16:59', '4:59 နေ့လယ်'],
+      ['18:30', '6:30 ညနေ'],
+      ['21:15', '9:15 ည'],
+      ['00:05', '12:05 ည'],
+      ['04:59', '4:59 ည'],
+    ];
+    for (const [time, expected] of cases) expect(formatTime12(at('2026-11-09', time)), time).toBe(expected);
   });
 
   it('groups an evening UTC instant on the next Myanmar date', () => {

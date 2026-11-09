@@ -495,7 +495,7 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 }
 .modal-handle { width: 40px; height: 5px; border-radius: var(--radius-pill); background: var(--line); margin: 0 auto 12px; }
 .modal h2 { font-size: 20px; }
-.modal-title-row { display: flex; align-items: center; gap: 12px; padding-right: 48px; margin-bottom: 12px; }
+.modal-title-row { display: flex; align-items: center; gap: 12px; padding-right: 0; margin-bottom: 12px; }
 .modal-title-row h2 { flex: 1; min-width: 0; margin: 0; }
 .modal .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .modal .btn svg { width: 20px; height: 20px; flex-shrink: 0; }
@@ -629,8 +629,8 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 .add-layout .field-hero input[aria-invalid="true"] { border-color: var(--red); border-width: 2px; }
 /* BP tiles: three equal tiles in one row at >=360px, stacked below */
 .bp-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.add-layout .bp-tiles .field { font-size: 12px; overflow-wrap: normal; word-break: normal; }
-.add-layout .bp-tiles .field input { min-height: 60px; text-align: center; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--accent-softer); border-radius: 18px; }
+.add-layout .bp-tiles .field { font-size: 12px; overflow-wrap: normal; word-break: normal; grid-template-rows: 1fr auto; }
+.add-layout .bp-tiles .field input { height: 60px; min-height: 60px; text-align: center; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--accent-softer); border-radius: 18px; }
 @media (max-width: 359px) {
   .bp-tiles { grid-template-columns: 1fr; }
 }
@@ -638,6 +638,7 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 .field-icon-wrap { position: relative; display: block; min-width: 0; }
 .field-icon-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--muted); pointer-events: none; }
 .field-icon-wrap input { padding-left: 44px; }
+.time-readout { display: block; font-size: 13px; color: var(--muted); }
 /* Day-part pill + note */
 .daypart-line { display: grid; gap: 4px; justify-items: start; }
 .daypart-pill { display: inline-flex; background: var(--accent-soft); color: var(--accent-deep); font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }

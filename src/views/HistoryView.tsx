@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { badgeText, dayHeading, displayNotes, noticesFor, readingContext, readingValue } from '../components/format.ts';
-import { formatWallTime } from '../domain/time.ts';
+import { formatTime12 } from '../domain/time.ts';
 import { badgeFor } from '../domain/safety.ts';
 import { Modal, TrashIcon } from '../components/Modal.tsx';
 import { EMPTY_FILTER, filterReadings, groupByDay, groupByDayPart, type HistoryFilter } from '../domain/history.ts';
@@ -81,7 +81,7 @@ export function HistoryView({ onEdit, onDeleted }: { onEdit: (reading: Reading) 
                     return (
                       <li key={reading.id} className="reading-row">
                         <div className="reading-row-main">
-                          <span className="reading-row-time">{formatWallTime(new Date(reading.recordedAt))}</span>
+                          <span className="reading-row-time">{formatTime12(new Date(reading.recordedAt))}</span>
                           <strong>{readingValue(reading)}</strong>
                           <span className="muted"> · {readingContext(reading)}</span>
                           {badgeText(reading, readings) ? <span className={`badge ${badgeFor(noticesFor(reading, readings))}`}>{badgeText(reading, readings)}</span> : null}

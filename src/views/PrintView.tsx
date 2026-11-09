@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { badgeText, noticesFor, readingContext, readingValue, whenLabel } from '../components/format.ts';
 import { filterReadings } from '../domain/history.ts';
-import { DAYPART_LABEL, MONTHS_MY, SYMPTOM_LABEL } from '../domain/labels.ts';
+import { MONTHS_MY, SYMPTOM_LABEL } from '../domain/labels.ts';
 import { badgeFor } from '../domain/safety.ts';
 import {
   availableMonths,
@@ -13,7 +13,7 @@ import {
   summarizeReadings,
   type MonthSummary,
 } from '../domain/summary.ts';
-import { dateKey, dayPart, formatLongDate, formatWallTime } from '../domain/time.ts';
+import { dateKey, formatLongDate, formatTime12 } from '../domain/time.ts';
 import { OFFSET_LABEL, TIMEZONE, type Medication } from '../domain/types.ts';
 import { useLog } from '../store/LogProvider.tsx';
 
@@ -79,7 +79,7 @@ export function PrintView() {
         <h2>သွေးမှတ်တမ်း — ဆရာဝန်အတွက် အနှစ်ချုပ်</h2>
         {demo ? <p>နမူနာဒေတာ။ တကယ်လူနာမှတ်တမ်းမဟုတ်ပါ။</p> : null}
         <p>အမည်: {name || '________________'}</p>
-        <p>အချိန်ဇုန်: {TIMEZONE} ({OFFSET_LABEL}) · ထုတ်သည့်အချိန် {formatLongDate(printedAt)} {formatWallTime(printedAt)} {DAYPART_LABEL[dayPart(printedAt)]}</p>
+        <p>အချိန်ဇုန်: {TIMEZONE} ({OFFSET_LABEL}) · ထုတ်သည့်အချိန် {formatLongDate(printedAt)} {formatTime12(printedAt)}</p>
         <p>Not a diagnosis. Not for dose adjustment.</p>
         <p>ဤစာရွက်သည် ကိုယ်တိုင်မှတ်ထားသော ကိန်းများသာဖြစ်သည်။ ရောဂါရှာဖွေချက် သို့မဟုတ် ဆေးညွှန်းမဟုတ်ပါ။</p>
         <MonthlySummary summary={summary} previous={previous} medications={medications} />

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_NOTE } from '../domain/demo.ts';
 import type { Reading } from '../domain/types.ts';
-import { displayNotes } from './format.ts';
+import { displayNotes, whenLabel } from './format.ts';
 
 const stamp = '2026-11-09T00:00:00.000Z';
 
@@ -27,5 +27,12 @@ describe('displayNotes', () => {
     expect(displayNotes(glucoseRow('a', SAMPLE_NOTE))).toBe('');
     expect(displayNotes(glucoseRow('b', `${SAMPLE_NOTE} လက္ခဏာပြသရန်နမူနာ။`))).toBe('လက္ခဏာပြသရန်နမူနာ။');
     expect(displayNotes(glucoseRow('c', 'မနက်စာ စားပြီး'))).toBe('မနက်စာ စားပြီး');
+  });
+});
+
+describe('whenLabel', () => {
+  it('shows a 12-hour time with the day-part word', () => {
+    const now = new Date('2026-11-09T12:00:00+06:30');
+    expect(whenLabel(glucoseRow('d', ''), now)).toBe('ယနေ့ · 7:10 နံနက်');
   });
 });

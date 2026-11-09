@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { DAYPART_LABEL, DAYPART_RANGE, MEAL_LABEL, SYMPTOM_LABEL } from '../domain/labels.ts';
 import { normalizeNumericInput, parseLooseNumber } from '../domain/numbers.ts';
 import { badgeFor, evaluateReading } from '../domain/safety.ts';
-import { dayPart, wallClockToIso } from '../domain/time.ts';
+import { dayPart, formatTime12, wallClockToIso } from '../domain/time.ts';
 import { EMERGENCY_SYMPTOMS, MEAL_CONTEXTS, SYMPTOMS, type GlucoseUnit, type MealContext, type Reading, type Symptom } from '../domain/types.ts';
 import { convertGlucose, formatGlucose, roundGlucose } from '../domain/units.ts';
 import { createId, issueMessage, validateReading, type ValidateIssue } from '../domain/validate.ts';
@@ -105,6 +105,11 @@ export function ReadingForm({
               <ClockIcon />
               <input type="time" value={draft.time} onChange={(event) => update({ time: event.target.value })} required />
             </span>
+            {iso ? (
+              <span className="time-readout" aria-live="polite">
+                {formatTime12(new Date(iso))}
+              </span>
+            ) : null}
           </label>
         </div>
         <div className="daypart-line">

@@ -4,7 +4,7 @@ import { bpSeries, cappedDomain, CHART_GAP_MS, glucoseSeries, polylines, yDomain
 import { filterReadings } from '../domain/history.ts';
 import { MEAL_LABEL } from '../domain/labels.ts';
 import { BP_TARGET, FASTING_TARGET, POSTMEAL_TARGET_MAX, summarizeReadings, type MonthSummary } from '../domain/summary.ts';
-import { dateKey, formatWallTime, shiftDateKey } from '../domain/time.ts';
+import { dateKey, formatTime12, shiftDateKey } from '../domain/time.ts';
 import type { GlucoseUnit, MealContext, Reading } from '../domain/types.ts';
 import { convertGlucose, formatGlucose } from '../domain/units.ts';
 import { useLog } from '../store/LogProvider.tsx';
@@ -218,7 +218,7 @@ function Trend({
               return (
                 <g key={`${item.id}-${point.id}-${point.y}`}>
                   <path d={`M ${cx} ${cy - 8} L ${cx + 6} ${cy + 4} L ${cx - 6} ${cy + 4} Z`} fill={item.color}>
-                    <title>{`${item.label} ${point.y} ${formatWallTime(new Date(point.t))}`}</title>
+                    <title>{`${item.label} ${point.y} ${formatTime12(new Date(point.t))}`}</title>
                   </path>
                   <text x={cx} y={Math.max(11, cy - 11)} fontSize="11" textAnchor="middle" fill={item.color}>
                     {formatTick(point.y)}
@@ -228,7 +228,7 @@ function Trend({
             }
             return (
               <circle key={`${item.id}-${point.id}-${point.y}`} cx={cx} cy={cy} r="4.5" fill={item.color}>
-                <title>{`${item.label} ${point.y} ${formatWallTime(new Date(point.t))}`}</title>
+                <title>{`${item.label} ${point.y} ${formatTime12(new Date(point.t))}`}</title>
               </circle>
             );
           }),
@@ -256,7 +256,7 @@ function PointTable({ rows, valueLabel }: { rows: (ChartPoint & { label: string 
         <tbody>
           {sorted.map((row) => (
             <tr key={`${row.id}-${row.y}`}>
-              <td>{dateKey(new Date(row.t))} {formatWallTime(new Date(row.t))}</td>
+              <td>{dateKey(new Date(row.t))} {formatTime12(new Date(row.t))}</td>
               <td>{row.label}</td>
               <td>{row.y}</td>
             </tr>

@@ -109,6 +109,13 @@ export function formatWallTime(date: Date): string {
   return `${pad2(parts.hour)}:${pad2(parts.minute)}`;
 }
 
+/** Display-only 12-hour clock with the Burmese day-part word; storage stays 24h. */
+export function formatTime12(date: Date): string {
+  const parts = zonedParts(date);
+  const hour12 = parts.hour % 12 === 0 ? 12 : parts.hour % 12;
+  return `${hour12}:${pad2(parts.minute)} ${DAYPART_LABEL[dayPart(date)]}`;
+}
+
 export function formatLongDate(date: Date): string {
   const parts = zonedParts(date);
   const month = MONTHS_MY[parts.month - 1] ?? '';

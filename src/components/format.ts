@@ -1,7 +1,7 @@
 import { SAMPLE_NOTE } from '../domain/demo.ts';
-import { DAYPART_LABEL, MEAL_LABEL, MONTHS_MY } from '../domain/labels.ts';
+import { MEAL_LABEL, MONTHS_MY } from '../domain/labels.ts';
 import { evaluateReading, badgeFor, badgeLabel, type SafetyNotice } from '../domain/safety.ts';
-import { dayPart, formatLongDate, formatWallTime, relativeDayLabel } from '../domain/time.ts';
+import { formatLongDate, formatTime12, relativeDayLabel } from '../domain/time.ts';
 import type { Reading } from '../domain/types.ts';
 import { formatGlucose } from '../domain/units.ts';
 
@@ -23,7 +23,7 @@ export function whenLabel(reading: Reading, now = new Date()): string {
   const date = new Date(reading.recordedAt);
   const relative = relativeDayLabel(date, now);
   const day = relative ?? formatLongDate(date);
-  return `${day} · ${formatWallTime(date)} · ${DAYPART_LABEL[dayPart(date)]}`;
+  return `${day} · ${formatTime12(date)}`;
 }
 
 export function noticesFor(reading: Reading, all: Reading[]): SafetyNotice[] {
