@@ -23,6 +23,7 @@
 }
 
 * { box-sizing: border-box; }
+html, body { overflow-x: clip; }
 html, body, #root { min-height: 100%; }
 body { margin: 0; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -67,6 +68,7 @@ img { max-width: 100%; }
   align-items: flex-end;
   margin-bottom: 12px;
 }
+.topbar > * { min-width: 0; }
 .brand { margin: 0; font-size: 1.55rem; letter-spacing: -0.02em; }
 .brand small, .muted, .hint { color: var(--muted); font-weight: 400; }
 .tz-chip, .demo-chip, .badge {
@@ -120,7 +122,7 @@ h3 { font-size: 1.05rem; margin-bottom: 6px; }
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
   padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
   background: rgba(255, 252, 248, 0.96);
@@ -133,6 +135,8 @@ h3 { font-size: 1.05rem; margin-bottom: 6px; }
   font-size: 0.78rem;
   line-height: 1.2;
   padding: 6px 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .nav-btn[aria-current="page"] { background: var(--soft); color: var(--teal-deep); }
 
@@ -143,7 +147,7 @@ h3 { font-size: 1.05rem; margin-bottom: 6px; }
   font-variant-numeric: tabular-nums;
   margin: 4px 0;
 }
-.field { display: grid; gap: 6px; font-weight: 600; }
+.field { display: grid; gap: 6px; font-weight: 600; min-width: 0; }
 .field input, .field select, .field textarea {
   min-height: 52px;
   border: 1.5px solid #b7cdc4;
@@ -151,10 +155,15 @@ h3 { font-size: 1.05rem; margin-bottom: 6px; }
   padding: 10px 12px;
   background: white;
   font-weight: 500;
+  /* A select's minimum width is its longest option. Without these the
+     symptoms dropdown (~565 px) inflates the whole form past the phone. */
+  min-width: 0;
+  width: 100%;
 }
 .field textarea { min-height: 96px; resize: vertical; }
 .field.uncertain input, .field.uncertain select { border-color: #c47d12; background: #fff8ec; }
-.choice-grid { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.stack > *, .grid-2 > * { min-width: 0; }
+.choice-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .choice {
   min-height: 52px;
   border-radius: 12px;
@@ -163,6 +172,8 @@ h3 { font-size: 1.05rem; margin-bottom: 6px; }
   text-align: left;
   padding: 10px 12px;
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .choice[aria-checked="true"] {
   border-color: var(--teal);
@@ -202,11 +213,12 @@ h3 { font-size: 1.05rem; margin-bottom: 6px; }
 
 .sticky-actions {
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   gap: 8px;
   margin-top: 8px;
   padding-top: 12px;
 }
+.sticky-actions .btn { min-width: 0; overflow-wrap: anywhere; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -254,7 +266,7 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   }
   .nav-btn { min-width: 108px; font-size: 0.95rem; }
   .grid-2 { grid-template-columns: 1fr 1fr; }
-  .choice-grid { grid-template-columns: repeat(3, 1fr); }
+  .choice-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .modal-backdrop { place-items: center; }
   .toast { left: auto; right: 24px; width: min(440px, calc(100% - 32px)); bottom: 24px; }
 }

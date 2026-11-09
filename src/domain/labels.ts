@@ -25,10 +25,10 @@ export const DAYPART_RANGE: Record<DayPart, string> = {
 export const SYMPTOM_LABEL: Record<Symptom, string> = {
   chest_pain: 'ရင်ဘတ်အောင့်',
   dyspnea: 'မော / အသက်ရှူခက်',
-  stroke_signs: 'လေဖြတ်လက္ခဏာ (မျက်နှာငဲ့၊ လက်အားနည်း၊ စကားမပီ)',
+  stroke_signs: 'လေဖြတ်လက္ခဏာ',
   vomiting: 'အန်',
   deep_breathing: 'နက်နက်ရှိုင်းရှိုင်း အသက်ရှူ',
-  confusion: 'ဇဝေဇဝါ / စိတ်ရှုပ်',
+  confusion: 'ဇဝေဇဝါ',
   sweating: 'ချွေးထွက်',
   shaking: 'တုန်',
   dizziness: 'ခေါင်းမူး',
