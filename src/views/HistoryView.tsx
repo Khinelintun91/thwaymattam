@@ -107,7 +107,7 @@ export function HistoryView({ onEdit, onDeleted }: { onEdit: (reading: Reading) 
             <button type="button" className="btn btn-quiet" onClick={() => setPending(null)}>မဖျက်ပါ</button>
             <button
               type="button"
-              className="btn btn-quiet-danger"
+              className="btn btn-danger"
               onClick={() => {
                 const target = pending;
                 if (deleteReading(target.id)) onDeleted(target);

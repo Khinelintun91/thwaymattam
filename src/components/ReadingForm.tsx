@@ -94,18 +94,29 @@ export function ReadingForm({
         <div className="grid-2">
           <label className="field">
             ရက်စွဲ (မြန်မာစံတော်ချိန်)
-            <input type="date" value={draft.date} onChange={(event) => update({ date: event.target.value })} required />
+            <span className="field-icon-wrap">
+              <CalendarIcon />
+              <input type="date" value={draft.date} onChange={(event) => update({ date: event.target.value })} required />
+            </span>
           </label>
           <label className="field">
             အချိန် (UTC+6:30)
-            <input type="time" value={draft.time} onChange={(event) => update({ time: event.target.value })} required />
+            <span className="field-icon-wrap">
+              <ClockIcon />
+              <input type="time" value={draft.time} onChange={(event) => update({ time: event.target.value })} required />
+            </span>
           </label>
         </div>
-        <p>{part ? `${DAYPART_LABEL[part]} (${DAYPART_RANGE[part]})` : 'နေ့ရက်နှင့် အချိန်ကို စစ်ပါ။'} အချိန်အမည်သည် အစာရှောင်ခြင်းကို မဆိုလိုပါ။</p>
+        <div className="daypart-line">
+          <span className={part ? 'daypart-pill' : 'daypart-pill daypart-pill-amber'}>
+            {part ? `${DAYPART_LABEL[part]} (${DAYPART_RANGE[part]})` : 'နေ့ရက်နှင့် အချိန်ကို စစ်ပါ။'}
+          </span>
+          <p className="daypart-note">အချိန်အမည်သည် အစာရှောင်ခြင်းကို မဆိုလိုပါ။</p>
+        </div>
 
         {draft.type === 'glucose' ? (
           <div className="stack">
-            <label className="field">
+            <label className="field field-hero">
               သွေးဂလူးကို့စ်
               <input
                 inputMode="decimal"
@@ -140,7 +151,7 @@ export function ReadingForm({
               </select>
             </label>
             {draft.mealContext === 'postmeal' ? (
-              <label className="field">
+              <label className="field field-fade-in">
                 <span className="field-head">
                   <span>အစာစတင်စားချိန်မှ မိနစ်</span>
                   <span className="field-hint">မသိလျှင် ချန်လှပ်နိုင်သည်။ နာရီမှ မခန့်မှန်းပါ။</span>
@@ -154,7 +165,7 @@ export function ReadingForm({
             ) : null}
           </div>
         ) : (
-          <div className="grid-2">
+          <div className="bp-tiles">
             <NumberField label="အပေါ်သွေးပေါင် SYS" field="systolic" draft={draft} setNumber={setNumber} />
             <NumberField label="အောက်သွေးပေါင် DIA" field="diastolic" draft={draft} setNumber={setNumber} />
             <NumberField label="သွေးခုန်နှုန်း PUL (မထည့်လည်းရ)" field="pulse" draft={draft} setNumber={setNumber} />
@@ -241,9 +252,17 @@ function NumberField({
   draft: Draft;
   setNumber: (field: NumericKey, value: string) => void;
 }) {
+  const words = label.split(' ');
   return (
     <label className="field">
-      {label}
+      <span className="field-label-words">
+        {words.map((word, index) => (
+          <span key={index}>
+            <span className="nowrap">{word}</span>
+            {index < words.length - 1 ? ' ' : ''}
+          </span>
+        ))}
+      </span>
       <input inputMode="decimal" value={draft[field]} onChange={(event) => setNumber(field, event.target.value)} />
     </label>
   );
@@ -288,6 +307,24 @@ function WarningIcon() {
       <path d="M12 3.5 2.8 19.5h18.4L12 3.5z" />
       <path d="M12 10v4.5" />
       <circle cx="12" cy="17.2" r="0.7" fill="currentColor" stroke="none" />
+    </FormIcon>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <FormIcon>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </FormIcon>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <FormIcon>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </FormIcon>
   );
 }

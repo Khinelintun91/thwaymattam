@@ -53,11 +53,6 @@ export function Modal({
           <h2 id="modal-title">{title}</h2>
         </div>
         {children}
-        {onClose ? (
-          <button type="button" className="modal-close" aria-label="ပိတ်မည်" onClick={onClose}>
-            <XIcon />
-          </button>
-        ) : null}
       </div>
     </div>
   );
@@ -77,14 +72,6 @@ function ModalIcon({ children }: { children: ReactNode }) {
     >
       {children}
     </svg>
-  );
-}
-
-function XIcon() {
-  return (
-    <ModalIcon>
-      <path d="M6 6l12 12M18 6L6 18" />
-    </ModalIcon>
   );
 }
 
