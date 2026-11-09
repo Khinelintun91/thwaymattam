@@ -5,6 +5,7 @@ import { MEAL_LABEL } from '../domain/labels.ts';
 import { BP_TARGET, FASTING_TARGET, POSTMEAL_TARGET_MAX, summarizeReadings, type MonthSummary } from '../domain/summary.ts';
 import { dateKey, formatWallTime, shiftDateKey } from '../domain/time.ts';
 import type { GlucoseUnit, MealContext, Reading } from '../domain/types.ts';
+import { convertGlucose, formatGlucose } from '../domain/units.ts';
 import { useLog } from '../store/LogProvider.tsx';
 
 const CONTEXT_COLOR: Record<MealContext, string> = {
@@ -67,7 +68,7 @@ export function ChartsView() {
             points: series.points,
           }))}
         />
-        <GlucoseLine summary={summary} />
+        <GlucoseLine summary={summary} unit={unit} />
         <p className="hint">mmol ဂရပ် {mmol.reduce((sum, series) => sum + series.points.length, 0)} မှတ်၊ mg/dL ဂရပ် {mg.reduce((sum, series) => sum + series.points.length, 0)} မှတ်။</p>
         <PointTable rows={active.flatMap((series) => series.points.map((point) => ({ ...point, label: MEAL_LABEL[series.context] })))} valueLabel={unit} />
       </section>
@@ -97,14 +98,17 @@ export function ChartsView() {
   );
 }
 
-function GlucoseLine({ summary }: { summary: MonthSummary | null }) {
+function GlucoseLine({ summary, unit }: { summary: MonthSummary | null; unit: GlucoseUnit }) {
   if (!summary) return null;
+  const avg = (mg: number) => (unit === 'mmol/L' ? formatGlucose(convertGlucose(mg, 'mg/dL', 'mmol/L'), 'mmol/L') : String(mg));
   const parts: string[] = [];
   if (summary.fasting.avg != null) {
-    parts.push(`အစာရှောင် ပျမ်းမျှ ${summary.fasting.avg} mg/dL (target ${FASTING_TARGET.min}–${FASTING_TARGET.max})`);
+    const target = unit === 'mmol/L' ? '4.4–7.2' : `${FASTING_TARGET.min}–${FASTING_TARGET.max}`;
+    parts.push(`အစာရှောင် ပျမ်းမျှ ${avg(summary.fasting.avg)} ${unit} (target ${target})`);
   }
   if (summary.postmeal.avg != null) {
-    parts.push(`အစာစားပြီး ပျမ်းမျှ ${summary.postmeal.avg} mg/dL (target ${POSTMEAL_TARGET_MAX} အောက်)`);
+    const target = unit === 'mmol/L' ? '10.0' : `${POSTMEAL_TARGET_MAX}`;
+    parts.push(`အစာစားပြီး ပျမ်းမျှ ${avg(summary.postmeal.avg)} ${unit} (target ${target} အောက်)`);
   }
   if (parts.length === 0) return null;
   return <p className="hint">{parts.join(' · ')}</p>;
