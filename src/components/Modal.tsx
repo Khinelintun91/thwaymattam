@@ -41,6 +41,7 @@ export function Modal({
   return (
     <div className="modal-backdrop no-print">
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={ref}>
+        <div className="modal-handle" aria-hidden="true" />
         <h2 id="modal-title">{title}</h2>
         {children}
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal } from './components/Modal.tsx';
+import { NavIcon } from './components/NavIcons.tsx';
 import { ACK_KEY, type Reading } from './domain/types.ts';
 import { LogProvider, useLog } from './store/LogProvider.tsx';
 import { AddView } from './views/AddView.tsx';
@@ -80,8 +81,17 @@ function Shell() {
           ['charts', 'ဂရပ်'],
           ['more', 'ပိုမို'],
         ] as const).map(([id, label]) => (
-          <button key={id} type="button" className="nav-btn" aria-current={view === id ? 'page' : undefined} onClick={() => go(id)}>
-            {label}
+          <button
+            key={id}
+            type="button"
+            className={id === 'add' ? 'nav-btn nav-btn-fab' : 'nav-btn'}
+            aria-current={view === id ? 'page' : undefined}
+            onClick={() => go(id)}
+          >
+            <span className="nav-icon">
+              <NavIcon id={id} />
+            </span>
+            <span>{label}</span>
           </button>
         ))}
       </nav>
@@ -93,9 +103,17 @@ function Shell() {
           </div>
         </header>
         {log.demo ? <p className="demo-chip">နမူနာဒေတာ — တကယ်လူနာမှတ်တမ်း မဟုတ်ပါ</p> : null}
-        {log.saveMessage ? <p className="banner warning" role="status">{log.saveMessage}</p> : null}
+        {log.saveMessage ? (
+          <p className="banner warning" role="status">
+            <span className="banner-icon" aria-hidden="true">!</span>
+            <span>{log.saveMessage}</span>
+          </p>
+        ) : null}
         {log.loadError === 'unavailable' ? (
-          <p className="banner warning" role="alert">ဤဘရောက်ဇာတွင် ဒေတာသိမ်း၍မရပါ။ မှတ်တမ်းမကျန်နိုင်ပါ။</p>
+          <p className="banner warning" role="alert">
+            <span className="banner-icon" aria-hidden="true">!</span>
+            <span>ဤဘရောက်ဇာတွင် ဒေတာသိမ်း၍မရပါ။ မှတ်တမ်းမကျန်နိုင်ပါ။</span>
+          </p>
         ) : null}
         {log.loadError === 'corrupt' ? (
           <section className="card stack">

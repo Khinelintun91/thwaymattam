@@ -40,8 +40,8 @@ export default defineConfig({
         lang: 'my',
         dir: 'ltr',
         display: 'standalone',
-        background_color: '#e7f0ec',
-        theme_color: '#0e5c56',
+        background_color: '#F3F5F9',
+        theme_color: '#3B5BF5',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
