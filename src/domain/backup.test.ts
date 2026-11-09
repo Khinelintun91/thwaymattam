@@ -30,7 +30,7 @@ function glucose(id: string, value: number, minute = '07:30'): Reading {
 describe('backup import', () => {
   it('rejects invalid rows, strips images, and dedupes before merge or replace', () => {
     const existing = glucose('reading01', 101);
-    const file = buildBackup([existing], NOW);
+    const file = buildBackup([existing], [], NOW);
     expect(file.app).toBe('thwaymattam');
     expect(file.timezone).toBe('Asia/Rangoon');
     const raw = {
@@ -125,7 +125,23 @@ describe('backup import', () => {
 
   it('rejects the wrong envelope', () => {
     expect(readImport({ app: 'other', version: 1, readings: [] }).ok).toBe(false);
-    expect(readImport({ app: 'thwaymattam', version: 2, readings: [] })).toMatchObject({ ok: false, code: 'unsupported-version' });
+    expect(readImport({ app: 'thwaymattam', version: 3, readings: [] })).toMatchObject({ ok: false, code: 'unsupported-version' });
     expect(readImport([])).toMatchObject({ ok: false, code: 'not-object' });
+  });
+
+  it('imports version 1 backups without medications and version 2 backups with them', () => {
+    const v1 = readImport({ app: 'thwaymattam', version: 1, timezone: 'Asia/Rangoon', exportedAt: NOW.toISOString(), readings: [] });
+    expect(v1.ok && v1.medications).toEqual([]);
+    const med = { id: 'med-00001', name: 'Metformin', dose: '500 mg', notes: '', createdAt: NOW.toISOString(), updatedAt: NOW.toISOString() };
+    const v2 = readImport({
+      app: 'thwaymattam',
+      version: 2,
+      timezone: 'Asia/Rangoon',
+      exportedAt: NOW.toISOString(),
+      readings: [],
+      medications: [med, { ...med, id: 'med-00002', name: '' }],
+    });
+    expect(v2.ok && v2.medications).toEqual([med]);
+    expect(v2.ok && v2.rejectedMedications).toBe(1);
   });
 });

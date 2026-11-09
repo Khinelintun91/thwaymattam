@@ -1,6 +1,25 @@
-import type { Reading, StoreData } from './types.ts';
+import type { Medication, Reading, StoreData } from './types.ts';
 import { dateKey, shiftDateKey, wallClockToIso } from './time.ts';
 import { emptyStore } from './validate.ts';
+
+/**
+ * True when a stored demo set predates the 3-month generated rows: the old
+ * set has only the 9 anchor rows and no generated `demo-*-d<offset>-*` ids.
+ * An empty set is not stale — the normal seeding path handles it.
+ */
+export function isStaleDemoSet(readings: Reading[]): boolean {
+  return readings.length > 0 && !readings.some((reading) => /^demo-(glu|bp)-d\d+-/.test(reading.id));
+}
+
+/** Sample medicines for the demo room only. Clearly labelled as samples. */
+export function buildDemoMedications(now = new Date()): Medication[] {
+  const stamp = now.toISOString();
+  const note = 'နမူနာသီးသန့်။';
+  return [
+    { id: 'demo-med-1', name: 'Metformin', dose: '500 mg · မနက် ၁ လုံး၊ ည ၁ လုံး', notes: note, createdAt: stamp, updatedAt: stamp },
+    { id: 'demo-med-2', name: 'Amlodipine', dose: '5 mg · မနက် ၁ လုံး', notes: note, createdAt: stamp, updatedAt: stamp },
+  ];
+}
 
 function at(day: string, time: string): string {
   const iso = wallClockToIso(day, time);
@@ -206,5 +225,5 @@ export function buildDemoReadings(now = new Date()): Reading[] {
 }
 
 export function buildDemoStore(now = new Date()): StoreData {
-  return { ...emptyStore(now), readings: buildDemoReadings(now) };
+  return { ...emptyStore(now), readings: buildDemoReadings(now), medications: buildDemoMedications(now) };
 }

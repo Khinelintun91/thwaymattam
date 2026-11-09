@@ -1,5 +1,5 @@
 export const APP_ID = 'thwaymattam';
-export const STORE_VERSION = 1;
+export const STORE_VERSION = 2;
 export const TIMEZONE = 'Asia/Rangoon';
 export const OFFSET_LABEL = 'UTC+6:30';
 
@@ -68,11 +68,22 @@ export interface BpReading extends ReadingBase {
 
 export type Reading = GlucoseReading | BpReading;
 
+/** A medicine the person takes regularly. Shown in the doctor summary. No dose advice is ever derived from this. */
+export interface Medication {
+  id: string;
+  name: string;
+  dose: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoreData {
-  version: 1;
+  version: 2;
   revision: number;
   updatedAt: string;
   readings: Reading[];
+  medications: Medication[];
 }
 
 export function isSymptom(value: string): value is Symptom {

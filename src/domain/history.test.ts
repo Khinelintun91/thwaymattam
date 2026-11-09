@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bpSeries, glucoseSeries, polylines, yDomain, CHART_GAP_MS } from './chart.ts';
+import { bpSeries, cappedDomain, glucoseSeries, polylines, yDomain, CHART_GAP_MS } from './chart.ts';
 import { buildDemoReadings } from './demo.ts';
 import { filterReadings, groupByDay, latestReading } from './history.ts';
 import { dateKey } from './time.ts';
@@ -54,5 +54,14 @@ describe('history and charts', () => {
     expect(single.max - single.min).toBeGreaterThan(20);
     expect(single.min).toBeGreaterThan(70);
     expect(single.max).toBeLessThan(300);
+  });
+
+  it('caps the display domain so one spike does not flatten the chart', () => {
+    const uncapped = yDomain([120, 130, 260], []);
+    expect(uncapped.max).toBeGreaterThan(240);
+    const capped = cappedDomain([120, 130, 260], 200, [180]);
+    expect(capped.max).toBeLessThanOrEqual(220);
+    expect(capped.max).toBeGreaterThanOrEqual(180);
+    expect(capped.min).toBeLessThan(120);
   });
 });

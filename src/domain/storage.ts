@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from './types.ts';
+import { STORAGE_KEY, STORE_VERSION } from './types.ts';
 import type { StoreData } from './types.ts';
 import { emptyStore, validateStore } from './validate.ts';
 
@@ -70,7 +70,7 @@ export function saveStore(
   }
 
   const validated = validateStore(
-    { ...next, version: 1, revision: expectedRevision, updatedAt: now.toISOString() },
+    { ...next, version: STORE_VERSION, revision: expectedRevision, updatedAt: now.toISOString() },
     { now, maxFutureMs: 48 * 60 * 60 * 1000 },
   );
   if (!validated.ok) return { ok: false, reason: 'invalid' };
@@ -91,7 +91,7 @@ export function saveStore(
 /** Explicit reset. This is the only writer that replaces corrupt bytes. */
 export function replaceStore(storage: StorageLike, key: string, next: StoreData, now = new Date()): SaveResult {
   const validated = validateStore(
-    { ...next, version: 1, revision: 0, updatedAt: now.toISOString() },
+    { ...next, version: STORE_VERSION, revision: 0, updatedAt: now.toISOString() },
     { now, maxFutureMs: 48 * 60 * 60 * 1000 },
   );
   if (!validated.ok) return { ok: false, reason: 'invalid' };

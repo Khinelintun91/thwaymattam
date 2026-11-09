@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDemoReadings, buildDemoStore } from './demo.ts';
+import { buildDemoMedications, buildDemoReadings, buildDemoStore, isStaleDemoSet } from './demo.ts';
 import { dateKey, shiftDateKey } from './time.ts';
 import { validateStore } from './validate.ts';
 
@@ -17,6 +17,22 @@ describe('3-month demo data', () => {
     expect(readings.every((reading) => Date.parse(reading.recordedAt) <= NOW.getTime())).toBe(true);
     const validated = validateStore(buildDemoStore(NOW), { now: NOW, maxFutureMs: 48 * 60 * 60 * 1000 });
     expect(validated.ok).toBe(true);
+  });
+
+  it('detects the old 9-row demo set as stale and the new set as fresh', () => {
+    const fresh = buildDemoReadings(NOW);
+    expect(isStaleDemoSet(fresh)).toBe(false);
+    expect(isStaleDemoSet([])).toBe(false);
+    const old = fresh.filter((reading) => !/^demo-(glu|bp)-d\d+-/.test(reading.id));
+    expect(old.length).toBe(9);
+    expect(isStaleDemoSet(old)).toBe(true);
+  });
+
+  it('ships sample medications in the demo room only', () => {
+    const medications = buildDemoMedications(NOW);
+    expect(medications.length).toBe(2);
+    expect(medications.every((medication) => medication.notes.includes('နမူနာ'))).toBe(true);
+    expect(buildDemoStore(NOW).medications.length).toBe(2);
   });
 
   it('is deterministic for the same date and keeps units valid', () => {

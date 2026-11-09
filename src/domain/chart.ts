@@ -78,3 +78,12 @@ export function yDomain(values: number[], guides: number[] = []): { min: number;
 }
 
 export const CHART_GAP_MS = 36 * 60 * 60 * 1000;
+
+/**
+ * Display domain from values clamped to a cap, so one extreme spike does not
+ * flatten the rest of the chart. Points above the cap are drawn at the cap
+ * with a marker; their true value is shown as a label, never hidden.
+ */
+export function cappedDomain(values: number[], cap: number, guides: number[] = []): { min: number; max: number } {
+  return yDomain(values.map((value) => Math.min(value, cap)), guides);
+}

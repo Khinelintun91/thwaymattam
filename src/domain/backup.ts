@@ -1,13 +1,14 @@
 import { APP_ID, STORE_VERSION, TIMEZONE } from './types.ts';
-import type { Reading } from './types.ts';
-import { validateReading, type ValidateIssue, type ValidateOptions } from './validate.ts';
+import type { Medication, Reading } from './types.ts';
+import { validateMedication, validateReading, type ValidateIssue, type ValidateOptions } from './validate.ts';
 
 export interface BackupFile {
   app: typeof APP_ID;
-  version: 1;
+  version: 1 | 2;
   timezone: typeof TIMEZONE;
   exportedAt: string;
   readings: Reading[];
+  medications?: Medication[];
 }
 
 export interface RejectedRow {
@@ -16,10 +17,10 @@ export interface RejectedRow {
 }
 
 export type ImportReadResult =
-  | { ok: true; readings: Reading[]; rejected: RejectedRow[] }
+  | { ok: true; readings: Reading[]; medications: Medication[]; rejected: RejectedRow[]; rejectedMedications: number }
   | { ok: false; code: 'not-object' | 'wrong-app' | 'unsupported-version' | 'readings-missing' | 'too-many' };
 
-export function buildBackup(readings: Reading[], now = new Date()): BackupFile {
+export function buildBackup(readings: Reading[], medications: Medication[] = [], now = new Date()): BackupFile {
   const sorted = [...readings].sort(
     (a, b) => Date.parse(a.recordedAt) - Date.parse(b.recordedAt) || a.id.localeCompare(b.id),
   );
@@ -29,6 +30,7 @@ export function buildBackup(readings: Reading[], now = new Date()): BackupFile {
     timezone: TIMEZONE,
     exportedAt: now.toISOString(),
     readings: sorted,
+    medications: [...medications].sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
 
@@ -47,7 +49,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function readImport(json: unknown, options: ValidateOptions & { maxReadings?: number } = {}): ImportReadResult {
   if (!isRecord(json)) return { ok: false, code: 'not-object' };
   if (json.app !== APP_ID) return { ok: false, code: 'wrong-app' };
-  if (json.version !== STORE_VERSION) return { ok: false, code: 'unsupported-version' };
+  // Version 1 backups (readings only) still import; version 2 adds medications.
+  if (json.version !== 1 && json.version !== STORE_VERSION) return { ok: false, code: 'unsupported-version' };
   if (!Array.isArray(json.readings)) return { ok: false, code: 'readings-missing' };
   if (json.readings.length > (options.maxReadings ?? 5000)) return { ok: false, code: 'too-many' };
   const readings: Reading[] = [];
@@ -57,7 +60,26 @@ export function readImport(json: unknown, options: ValidateOptions & { maxReadin
     if (!parsed.ok) rejected.push({ index, errors: parsed.errors });
     else readings.push(parsed.value);
   });
-  return { ok: true, readings, rejected };
+  const medications: Medication[] = [];
+  let rejectedMedications = 0;
+  if (json.version === STORE_VERSION && Array.isArray(json.medications)) {
+    for (const row of json.medications) {
+      const parsed = validateMedication(row, { now: options.now });
+      if (!parsed.ok) rejectedMedications += 1;
+      else if (!medications.some((item) => item.id === parsed.value.id)) medications.push(parsed.value);
+    }
+  }
+  return { ok: true, readings, medications, rejected, rejectedMedications };
+}
+
+/** Merge medication lists by id; the newer updatedAt wins. */
+export function mergeMedications(existing: Medication[], incoming: Medication[]): Medication[] {
+  const byId = new Map(existing.map((medication) => [medication.id, medication]));
+  for (const medication of incoming) {
+    const current = byId.get(medication.id);
+    if (!current || Date.parse(medication.updatedAt) > Date.parse(current.updatedAt)) byId.set(medication.id, medication);
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export interface DuplicateRow {

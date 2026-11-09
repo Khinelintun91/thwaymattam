@@ -83,9 +83,9 @@ describe('versioned storage', () => {
     expect(blocked).toMatchObject({ ok: false, reason: 'corrupt' });
     expect(map.get(STORAGE_KEY)).toBe('{not json');
 
-    map.set(STORAGE_KEY, JSON.stringify({ version: 2, revision: 3, updatedAt: NOW.toISOString(), readings: [] }));
+    map.set(STORAGE_KEY, JSON.stringify({ version: 3, revision: 3, updatedAt: NOW.toISOString(), readings: [] }));
     expect(saveStore(storage, STORAGE_KEY, emptyStore(NOW), 3, NOW)).toMatchObject({ ok: false, reason: 'corrupt' });
-    expect(map.get(STORAGE_KEY)).toContain('"version":2');
+    expect(map.get(STORAGE_KEY)).toContain('"version":3');
 
     const good = reading('reading02', 99);
     const bad = { ...good, glucoseValue: 0 };

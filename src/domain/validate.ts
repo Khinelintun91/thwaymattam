@@ -3,6 +3,7 @@ import type {
   GlucoseReading,
   GlucoseUnit,
   MealContext,
+  Medication,
   Reading,
   ReadingSource,
   StoreData,
@@ -265,9 +266,45 @@ function readBp(
   return { systolic: Math.round(systolic), diastolic: Math.round(diastolic), pulse };
 }
 
+export function validateMedication(input: unknown, options: ValidateOptions = {}): ValidateResult<Medication> {
+  const errors: ValidateIssue[] = [];
+  if (!isRecord(input)) return { ok: false, errors: [{ path: '', code: 'invalid' }] };
+  const now = options.now ?? new Date();
+  const stamp = now.toISOString();
+  const id = readId(input.id, errors);
+  const name = typeof input.name === 'string' ? input.name.trim() : '';
+  if (name === '') errors.push({ path: 'name', code: 'required' });
+  else if (name.length > 120) errors.push({ path: 'name', code: 'too-long' });
+  const dose = typeof input.dose === 'string' ? input.dose.trim() : '';
+  if (dose.length > 120) errors.push({ path: 'dose', code: 'too-long' });
+  const notes = readNotes(input.notes, errors);
+  const createdAt = readTimestamp(input.createdAt, 'createdAt', errors, stamp);
+  const updatedAt = readTimestamp(input.updatedAt, 'updatedAt', errors, stamp);
+  if (errors.length || !id || notes == null || !createdAt || !updatedAt) return { ok: false, errors };
+  return { ok: true, value: { id, name, dose, notes, createdAt, updatedAt } };
+}
+
+function readMedications(input: unknown, options: ValidateOptions): Medication[] | null {
+  if (input == null) return [];
+  if (!Array.isArray(input)) return null;
+  const medications: Medication[] = [];
+  const ids = new Set<string>();
+  for (const item of input) {
+    const parsed = validateMedication(item, options);
+    if (!parsed.ok) return null;
+    if (ids.has(parsed.value.id)) return null;
+    ids.add(parsed.value.id);
+    medications.push(parsed.value);
+  }
+  return medications;
+}
+
 export function validateStore(input: unknown, options: ValidateOptions = {}): ValidateResult<StoreData> {
   if (!isRecord(input)) return { ok: false, errors: [{ path: '', code: 'invalid' }] };
-  if (input.version !== STORE_VERSION) return { ok: false, errors: [{ path: 'version', code: 'invalid' }] };
+  // Version 1 stores (no medications field) migrate forward; anything else is invalid.
+  if (input.version !== 1 && input.version !== STORE_VERSION) {
+    return { ok: false, errors: [{ path: 'version', code: 'invalid' }] };
+  }
   if (typeof input.revision !== 'number' || !nearlyInteger(input.revision) || input.revision < 0) {
     return { ok: false, errors: [{ path: 'revision', code: 'invalid' }] };
   }
@@ -275,6 +312,8 @@ export function validateStore(input: unknown, options: ValidateOptions = {}): Va
     return { ok: false, errors: [{ path: 'updatedAt', code: 'date' }] };
   }
   if (!Array.isArray(input.readings)) return { ok: false, errors: [{ path: 'readings', code: 'invalid' }] };
+  const medications = readMedications(input.version === 1 ? undefined : input.medications, options);
+  if (medications == null) return { ok: false, errors: [{ path: 'medications', code: 'invalid' }] };
   const readings: Reading[] = [];
   const ids = new Set<string>();
   for (let index = 0; index < input.readings.length; index += 1) {
@@ -287,14 +326,15 @@ export function validateStore(input: unknown, options: ValidateOptions = {}): Va
   return {
     ok: true,
     value: {
-      version: 1,
+      version: STORE_VERSION,
       revision: input.revision,
       updatedAt: input.updatedAt,
       readings,
+      medications,
     },
   };
 }
 
 export function emptyStore(now = new Date()): StoreData {
-  return { version: 1, revision: 0, updatedAt: now.toISOString(), readings: [] };
+  return { version: STORE_VERSION, revision: 0, updatedAt: now.toISOString(), readings: [], medications: [] };
 }

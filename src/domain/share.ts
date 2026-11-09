@@ -1,6 +1,6 @@
 import { buildBackup } from './backup.ts';
 import { dateKey } from './time.ts';
-import type { Reading } from './types.ts';
+import type { Medication, Reading } from './types.ts';
 
 export interface ShareTarget<T> {
   canShare?: (data: { files?: T[] }) => boolean;
@@ -13,10 +13,10 @@ export function backupFileName(now = new Date()): string {
   return `thwaymattam-backup-${dateKey(now)}.json`;
 }
 
-export function backupPayload(readings: Reading[], now = new Date()): { name: string; json: string } {
+export function backupPayload(readings: Reading[], medications: Medication[] = [], now = new Date()): { name: string; json: string } {
   return {
     name: backupFileName(now),
-    json: JSON.stringify(buildBackup(readings, now), null, 2),
+    json: JSON.stringify(buildBackup(readings, medications, now), null, 2),
   };
 }
 
