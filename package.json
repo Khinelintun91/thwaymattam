@@ -4,9 +4,6 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "copy-ocr": "node scripts/copy-ocr-assets.mjs",
-    "predev": "node scripts/copy-ocr-assets.mjs",
-    "prebuild": "node scripts/copy-ocr-assets.mjs",
     "dev": "vite --host 0.0.0.0 --port 47231 --strictPort",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
@@ -20,7 +17,6 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tailwindcss": "^4.3.5",
-    "tesseract.js": "^7.0.0",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.0"
   },

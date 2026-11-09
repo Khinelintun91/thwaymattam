@@ -1,4 +1,3 @@
-import type { MeterParseResult } from '../domain/ocrParse.ts';
 import { nowWallClock } from '../domain/time.ts';
 import type { GlucoseUnit, MealContext, Reading, Symptom } from '../domain/types.ts';
 import { DRAFT_KEY } from '../domain/types.ts';
@@ -65,20 +64,6 @@ function wallParts(iso: string): { date: string; time: string } {
   return wall;
 }
 
-export function applyParse(draft: Draft, parsed: MeterParseResult): Draft {
-  const next: Draft = { ...draft, source: 'ocr' };
-  if (parsed.intent === 'glucose' && parsed.glucose) {
-    next.glucoseValue = String(parsed.glucose.value);
-    next.glucoseUnit = parsed.unitExplicit && parsed.glucoseUnit ? parsed.glucoseUnit : draft.glucoseUnit;
-  }
-  if (parsed.intent === 'bp') {
-    if (parsed.systolic) next.systolic = String(parsed.systolic.value);
-    if (parsed.diastolic) next.diastolic = String(parsed.diastolic.value);
-    if (parsed.pulse) next.pulse = String(parsed.pulse.value);
-  }
-  return next;
-}
-
 export function loadDraft(): Draft | null {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
@@ -96,7 +81,7 @@ export function saveDraft(draft: Draft): void {
   try {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   } catch {
-    /* The text draft is optional. Photos are never stored. */
+    /* The text draft is optional. */
   }
 }
 

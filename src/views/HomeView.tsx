@@ -41,7 +41,7 @@ export function HomeView({ onAdd }: { onAdd: (type: 'glucose' | 'bp') => void })
       {readings.length === 0 ? (
         <section className="card stack">
           <h2>မှတ်တမ်းမရှိသေးပါ</h2>
-          <p>ဓာတ်ပုံရိုက်၍ စစ်ပြီးမှ သိမ်းပါ၊ သို့မဟုတ် လက်ဖြင့်ထည့်ပါ။ ဒေတာသည် ဤဘရောက်ဇာထဲတွင်သာ ရှိသည်။</p>
+          <p>လက်ဖြင့်ထည့်ပါ။ ဒေတာသည် ဤဘရောက်ဇာထဲတွင်သာ ရှိသည်။</p>
         </section>
       ) : (
         <div className="grid-2">

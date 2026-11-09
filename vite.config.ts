@@ -32,7 +32,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.png', 'ocr/**/*'],
+      includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
         name: 'သွေးမှတ်တမ်း',
         short_name: 'သွေးမှတ်',

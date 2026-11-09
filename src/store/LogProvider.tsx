@@ -28,7 +28,7 @@ const LogContext = createContext<LogContextValue | null>(null);
 function reasonText(reason: StorageReason): string {
   switch (reason) {
     case 'quota':
-      return 'သိုလှောင်မှု ပြည့်နေသည်။ JSON ဘက်အပ်ထုတ်ပြီး မှတ်တမ်းအဟောင်းကို ဖျက်ပါ။ ဓာတ်ပုံကို မသိမ်းပါ။';
+      return 'သိုလှောင်မှု ပြည့်နေသည်။ JSON ဘက်အပ်ထုတ်ပြီး မှတ်တမ်းအဟောင်းကို ဖျက်ပါ။';
     case 'conflict':
       return 'အခြားတဘ်တွင် ပြောင်းထားသည်။ နောက်ဆုံးဒေတာကို ပြန်ယူပြီးပါပြီ။ ဤတစ်ကြိမ်ကို မရေးပါ။ ထပ်သိမ်းလျှင် ယခုတဘ်မှ ထပ်ရေးမည်။';
     case 'corrupt':
