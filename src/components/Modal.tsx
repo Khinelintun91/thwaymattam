@@ -5,11 +5,13 @@ const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabi
 export function Modal({
   title,
   titleIcon,
+  heroIcon,
   children,
   onClose,
 }: {
   title: string;
   titleIcon?: ReactNode;
+  heroIcon?: ReactNode;
   children: ReactNode;
   onClose?: () => void;
 }) {
@@ -44,6 +46,11 @@ export function Modal({
     <div className="modal-backdrop no-print">
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={ref}>
         <div className="modal-handle" aria-hidden="true" />
+        {heroIcon ? (
+          <div className="modal-hero" aria-hidden="true">
+            {heroIcon}
+          </div>
+        ) : null}
         <div className="modal-title-row">
           {titleIcon ? (
             <span className="icon-well icon-well-sm" aria-hidden="true">
