@@ -37,10 +37,20 @@ export function ShareBackupButton({ readings }: { readings?: Reading[] }) {
 
   return (
     <div className="stack">
-      <button type="button" className="btn btn-primary btn-block" onClick={() => void share()}>
+      <button type="button" className="btn btn-primary btn-block btn-share" onClick={() => void share()}>
+        <ShareIcon />
         ဖုန်းတစ်လုံးဆီ ပို့ရန်
       </button>
-      {message ? <p role="status">{message}</p> : null}
+      {message ? <p className="banner info banner-compact" role="status">{message}</p> : null}
     </div>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m22 2-7 20-4-9-9-4Z" />
+      <path d="M22 2 11 13" />
+    </svg>
   );
 }
