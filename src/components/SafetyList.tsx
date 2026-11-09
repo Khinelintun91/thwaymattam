@@ -10,7 +10,7 @@ const ICON: Record<SafetySeverity, string> = {
 export function SafetyList({ notices }: { notices: SafetyNotice[] }) {
   if (notices.length === 0) return null;
   return (
-    <div className="stack">
+    <div className="safety-list">
       {notices.map((notice) => (
         <article key={notice.code} className={`banner ${notice.severity}`}>
           <span className="banner-icon" aria-hidden="true">
