@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal } from './components/Modal.tsx';
-import { ACK_KEY, OFFSET_LABEL, TIMEZONE, type Reading } from './domain/types.ts';
+import { ACK_KEY, type Reading } from './domain/types.ts';
 import { LogProvider, useLog } from './store/LogProvider.tsx';
 import { AddView } from './views/AddView.tsx';
 import { ChartsView } from './views/ChartsView.tsx';
@@ -91,7 +91,6 @@ function Shell() {
             <h1 className="brand">သွေးမှတ်တမ်း</h1>
             <p className="muted">ဖုန်းထဲမှာပဲ သိမ်းသော သွေးဂလူးကို့စ်နှင့် သွေးပေါင်ချိန်</p>
           </div>
-          <span className="tz-chip">{TIMEZONE} {OFFSET_LABEL}</span>
         </header>
         {log.demo ? <p className="demo-chip">နမူနာဒေတာ — တကယ်လူနာမှတ်တမ်း မဟုတ်ပါ</p> : null}
         {log.saveMessage ? <p className="banner warning" role="status">{log.saveMessage}</p> : null}

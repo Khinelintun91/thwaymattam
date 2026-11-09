@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { evaluateReading } from '../domain/safety.ts';
+import { useMemo, useState } from 'react';
+import { badgeFor, evaluateReading } from '../domain/safety.ts';
 import type { Reading } from '../domain/types.ts';
 import { badgeText, noticesFor, readingContext, readingValue, whenLabel } from '../components/format.ts';
 import { SafetyList } from '../components/SafetyList.tsx';
 import { latestReading } from '../domain/history.ts';
-import { ShareBackupButton } from '../components/ShareBackup.tsx';
+import { weekSummary } from '../domain/summary.ts';
 import { useLog } from '../store/LogProvider.tsx';
 
 const WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -12,6 +12,11 @@ const WINDOW_MS = 48 * 60 * 60 * 1000;
 export function HomeView({ onAdd }: { onAdd: (type: 'glucose' | 'bp') => void }) {
   const { hydrated, readings } = useLog();
   const [now] = useState(() => Date.now());
+  const week = useMemo(() => weekSummary(readings, new Date(now)), [readings, now]);
+  const recent = useMemo(
+    () => [...readings].sort((a, b) => Date.parse(b.recordedAt) - Date.parse(a.recordedAt)).slice(0, 5),
+    [readings],
+  );
   if (!hydrated) return <p role="status">ဖွင့်နေသည်…</p>;
   const glucose = latestReading(readings, 'glucose');
   const bp = latestReading(readings, 'bp');
@@ -24,17 +29,9 @@ export function HomeView({ onAdd }: { onAdd: (type: 'glucose' | 'bp') => void })
 
   return (
     <div className="stack">
-      <p className="disclaimer">
+      <p className="muted disclaimer-line">
         ဤအက်ပ်သည် ရောဂါရှာဖွေခြင်း၊ ဆေးပမာဏပြောင်းခြင်း မပြုပါ။ နံပါတ်တစ်ခုတည်းကို ပုံမှန်ဟု မသတ်မှတ်ပါ။
       </p>
-      <section className="card stack">
-        <h2>ဖုန်းတစ်လုံးဆီ ပို့ရန်</h2>
-        <p>အခြားဖုန်းသို့ မှတ်တမ်းဖိုင် ပို့ပါ။ လက်ခံသောဖုန်းတွင် ပိုမို စာမျက်နှာမှ ပေါင်းထည့်ပါ။</p>
-        <ShareBackupButton />
-        <button type="button" className="btn btn-quiet btn-block" onClick={() => { window.location.hash = '#/more'; }}>
-          အခြားဖုန်းမှ ယူမည်
-        </button>
-      </section>
       {alerts.map((alert) => (
         <SafetyList key={alert.reading.id} notices={alert.notices} />
       ))}
@@ -44,10 +41,40 @@ export function HomeView({ onAdd }: { onAdd: (type: 'glucose' | 'bp') => void })
           <p>လက်ဖြင့်ထည့်ပါ။ ဒေတာသည် ဤဘရောက်ဇာထဲတွင်သာ ရှိသည်။</p>
         </section>
       ) : (
-        <div className="grid-2">
-          <LatestCard title="နောက်ဆုံး ဂလူးကို့စ်" reading={glucose} all={readings} />
-          <LatestCard title="နောက်ဆုံး သွေးပေါင်" reading={bp} all={readings} />
-        </div>
+        <>
+          <section className="card summary-strip" aria-label="ဒီအပတ် အနှစ်ချုပ်">
+            <div>
+              <strong className="summary-number">{week.count}</strong>
+              <span className="muted">ဒီအပတ် မှတ်တမ်း</span>
+            </div>
+            <div>
+              <strong className="summary-number">{week.inRangePercent == null ? '—' : `${week.inRangePercent}%`}</strong>
+              <span className="muted">ပစ်မှတ်အတွင်း</span>
+            </div>
+          </section>
+          <div className="grid-2">
+            <LatestCard title="နောက်ဆုံး ဂလူးကို့စ်" reading={glucose} all={readings} />
+            <LatestCard title="နောက်ဆုံး သွေးပေါင်" reading={bp} all={readings} />
+          </div>
+          <section className="card stack">
+            <h3>မကြာသေးသော မှတ်တမ်းများ</h3>
+            <ul className="reading-rows">
+              {recent.map((reading) => (
+                <li key={reading.id} className="reading-row">
+                  <div className="reading-row-main">
+                    <span className="reading-row-time">{whenLabel(reading)}</span>
+                    <strong>{readingValue(reading)}</strong>
+                    <span className="muted"> · {readingContext(reading)}</span>
+                    {badgeText(reading, readings) ? <span className={`badge ${badgeFor(noticesFor(reading, readings))}`}>{badgeText(reading, readings)}</span> : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="btn btn-quiet btn-block" onClick={() => { window.location.hash = '#/history'; }}>
+              မှတ်တမ်း အားလုံး ကြည့်မည်
+            </button>
+          </section>
+        </>
       )}
       <div className="grid-2">
         <button type="button" className="btn btn-primary" onClick={() => onAdd('glucose')}>ဂလူးကို့စ် ထည့်မည်</button>

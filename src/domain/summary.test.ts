@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildDemoReadings } from './demo.ts';
 import { MONTHS_MY } from './labels.ts';
-import { availableMonths, monthRange, previousMonth, summarizeReadings } from './summary.ts';
+import { availableMonths, monthRange, previousMonth, summarizeReadings, weekSummary } from './summary.ts';
 import type { Reading, Symptom } from './types.ts';
 import { validateReading } from './validate.ts';
 
@@ -93,5 +93,19 @@ describe('monthly summary', () => {
     const months = availableMonths(buildDemoReadings(NOW), MONTHS_MY);
     expect(months.map((month) => month.key)).toEqual(['2026-11', '2026-10', '2026-09', '2026-08']);
     expect(months[0]?.label).toBe('နိုဝင်ဘာ 2026');
+  });
+
+  it('summarizes this week: count and in-target share, ignoring older readings', () => {
+    const readings = [
+      glu('reading01', '2026-11-03', 100, 'fasting'),
+      glu('reading02', '2026-11-04', 140, 'fasting'),
+      glu('reading03', '2026-11-05', 65, 'fasting'),
+      glu('reading04', '2026-11-06', 150, 'postmeal'),
+      bp('reading05', '2026-11-07', 120, 70),
+      bp('reading06', '2026-11-08', 140, 90),
+      glu('reading07', '2026-10-20', 100, 'fasting'),
+    ];
+    expect(weekSummary(readings, NOW)).toEqual({ count: 6, inRangePercent: 50 });
+    expect(weekSummary([], NOW)).toEqual({ count: 0, inRangePercent: null });
   });
 });

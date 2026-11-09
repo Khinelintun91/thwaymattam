@@ -8,16 +8,23 @@ import type { GlucoseUnit, MealContext, Reading } from '../domain/types.ts';
 import { useLog } from '../store/LogProvider.tsx';
 
 const CONTEXT_COLOR: Record<MealContext, string> = {
-  fasting: '#0e5c56',
+  fasting: '#1d4ed8',
   premeal: '#1d4e89',
   postmeal: '#8a4b12',
   random: '#5c4d7a',
   unknown: '#5e6b66',
 };
 
+const RANGE_OPTIONS = [
+  { value: 1 as const, label: 'ဒီနေ့' },
+  { value: 7 as const, label: 'ဒီအပတ်' },
+  { value: 30 as const, label: 'ဒီလ' },
+  { value: 'all' as const, label: 'အားလုံး' },
+];
+
 export function ChartsView() {
   const { readings } = useLog();
-  const [days, setDays] = useState<7 | 30 | 90 | 'all'>(30);
+  const [days, setDays] = useState<1 | 7 | 30 | 'all'>(30);
   const [unit, setUnit] = useState<GlucoseUnit>('mg/dL');
   const ranged = useMemo(() => inRange(readings, days), [readings, days]);
   const mg = glucoseSeries(ranged, 'mg/dL');
@@ -34,16 +41,16 @@ export function ChartsView() {
     <div className="stack">
       <h2>ဂရပ်</h2>
       <p className="hint">အရောင်သည် အစာစားချိန်ဖြစ်သည်။ ကောင်း/မကောင်း မဟုတ်ပါ။ mg/dL နှင့် mmol/L ကို ခွဲပြသည်။ အချက်အလက်မရှိသော ကာလကို မျဉ်းမဆက်ပါ။</p>
-      <div className="row">
-        {([7, 30, 90, 'all'] as const).map((value) => (
-          <button key={String(value)} type="button" className="btn btn-quiet btn-small" aria-pressed={days === value} onClick={() => setDays(value)}>
-            {value === 'all' ? 'အားလုံး' : `${value} ရက်`}
+      <div className="segmented" role="group" aria-label="ကာလ">
+        {RANGE_OPTIONS.map((option) => (
+          <button key={String(option.value)} type="button" aria-pressed={days === option.value} onClick={() => setDays(option.value)}>
+            {option.label}
           </button>
         ))}
       </div>
-      <div className="row">
-        <button type="button" className="btn btn-quiet btn-small" aria-pressed={unit === 'mg/dL'} onClick={() => setUnit('mg/dL')}>mg/dL</button>
-        <button type="button" className="btn btn-quiet btn-small" aria-pressed={unit === 'mmol/L'} onClick={() => setUnit('mmol/L')}>mmol/L</button>
+      <div className="segmented" role="group" aria-label="ဂလူးကို့စ်ယူနစ်">
+        <button type="button" aria-pressed={unit === 'mg/dL'} onClick={() => setUnit('mg/dL')}>mg/dL</button>
+        <button type="button" aria-pressed={unit === 'mmol/L'} onClick={() => setUnit('mmol/L')}>mmol/L</button>
       </div>
       <section className="card stack">
         <h3>ဂလူးကို့စ် ({unit})</h3>
@@ -71,7 +78,7 @@ export function ChartsView() {
           cap={200}
           guides={[{ y: 180, label: 'SYS ၁၈၀' }, { y: 120, label: 'DIA ၁၂၀' }]}
           series={[
-            { id: 'sys', label: 'အပေါ်', color: '#0e5c56', points: pressure.systolic },
+            { id: 'sys', label: 'အပေါ်', color: '#1d4ed8', points: pressure.systolic },
             { id: 'dia', label: 'အောက်', color: '#1d4e89', points: pressure.diastolic },
           ]}
         />
@@ -110,7 +117,7 @@ function BpLine({ summary }: { summary: MonthSummary | null }) {
   return <p className="hint">{parts.join(' · ')}</p>;
 }
 
-function inRange(readings: Reading[], days: 7 | 30 | 90 | 'all'): Reading[] {
+function inRange(readings: Reading[], days: 1 | 7 | 30 | 'all'): Reading[] {
   if (days === 'all') return readings;
   const start = shiftDateKey(dateKey(new Date()), 1 - days);
   if (!start) return readings;
@@ -157,10 +164,10 @@ function Trend({
               width={width - pad.l - pad.r}
               y={yOf(Math.min(band.max, domain.max))}
               height={Math.max(0, yOf(Math.max(band.min, domain.min)) - yOf(Math.min(band.max, domain.max)))}
-              fill="#0e5c56"
+              fill="#1d4ed8"
               fillOpacity="0.07"
             />
-            <text x={width - pad.r - 4} y={yOf(Math.min(band.max, domain.max)) + 13} fontSize="11" textAnchor="end" fill="#0e5c56">
+            <text x={width - pad.r - 4} y={yOf(Math.min(band.max, domain.max)) + 13} fontSize="11" textAnchor="end" fill="#1d4ed8">
               {band.label}
             </text>
           </g>

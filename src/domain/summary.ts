@@ -1,6 +1,6 @@
 import { filterReadings } from './history.ts';
 import { isEmergencySymptom, type Reading, type Symptom } from './types.ts';
-import { dateKey } from './time.ts';
+import { dateKey, shiftDateKey } from './time.ts';
 import { convertGlucose } from './units.ts';
 
 /**
@@ -91,6 +91,33 @@ export function summarizeReadings(readings: Reading[], from: string, to: string)
       .map(([code, count]) => ({ code, count }))
       .sort((a, b) => b.count - a.count),
   };
+}
+
+export interface WeekSummary {
+  count: number;
+  /** Share of the week's readings inside their own target, or null when there are none. */
+  inRangePercent: number | null;
+}
+
+function readingInRange(reading: Reading): boolean {
+  if (reading.type === 'glucose') {
+    const mg = Math.round(convertGlucose(reading.glucoseValue, reading.glucoseUnit, 'mg/dL'));
+    if (mg < LOW_GLUCOSE_MGDL) return false;
+    if (reading.mealContext === 'fasting') return mg >= FASTING_TARGET.min && mg <= FASTING_TARGET.max;
+    if (reading.mealContext === 'postmeal') return mg < POSTMEAL_TARGET_MAX;
+    return mg <= 180;
+  }
+  return reading.systolic < BP_TARGET.sys && reading.diastolic < BP_TARGET.dia;
+}
+
+/** This week's readings (today + 6 days back) with the in-target share, for the Home summary strip. */
+export function weekSummary(readings: Reading[], now = new Date()): WeekSummary {
+  const to = dateKey(now);
+  const from = shiftDateKey(to, -6) ?? to;
+  const rows = filterReadings(readings, { type: 'all', context: 'all', unit: 'all', from, to });
+  if (rows.length === 0) return { count: 0, inRangePercent: null };
+  const inRange = rows.filter(readingInRange).length;
+  return { count: rows.length, inRangePercent: Math.round((inRange / rows.length) * 100) };
 }
 
 export interface MonthOption {
