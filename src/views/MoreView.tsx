@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Modal, TrashIcon, InfoIcon } from '../components/Modal.tsx';
+import { Modal, TrashIcon } from '../components/Modal.tsx';
 import { importPreviewSummary, importResultSummary, planImport, readImport, type ImportReadResult } from '../domain/backup.ts';
 import { backupPayload } from '../domain/share.ts';
-import { toCsv } from '../domain/csv.ts';
 import type { Medication, Reading } from '../domain/types.ts';
-import { ShareBackupButton } from '../components/ShareBackup.tsx';
 import { useLog } from '../store/LogProvider.tsx';
-import { SYNC_WEBHOOK_SCRIPT_TEMPLATE, testWebhookConnection } from '../domain/sync.ts';
+import { SYNC_WEBHOOK_SCRIPT_TEMPLATE, testWebhookConnection, formatSyncTimestamp } from '../domain/sync.ts';
+import { SyncDiagnosticsModal } from '../components/SyncDiagnostics.tsx';
 
 const MAX_IMPORT_BYTES = 1_500_000;
 
@@ -24,22 +23,27 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
   const [replaceArmed, setReplaceArmed] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageTone, setMessageTone] = useState<'info' | 'warning'>('info');
-  const [medName, setMedName] = useState('');
-  const [medDose, setMedDose] = useState('');
-  const [medMessage, setMedMessage] = useState<string | null>(null);
+
   const [clearOpen, setClearOpen] = useState(false);
   const [clearMessage, setClearMessage] = useState<string | null>(null);
+
+  // Sync state
   const [webhookUrl, setWebhookUrl] = useState(log.syncConfig.webhookUrl);
   const [autoSync, setAutoSync] = useState(log.syncConfig.autoSync);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [syncBusy, setSyncBusy] = useState(false);
   const [showScriptHelp, setShowScriptHelp] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
+  const [showDiagModal, setShowDiagModal] = useState(false);
 
+  // Medication quick state
+  const [medName, setMedName] = useState('');
+  const [medDose, setMedDose] = useState('');
+  const [medMessage, setMedMessage] = useState<string | null>(null);
 
   async function handleSaveSync() {
     log.updateSyncConfig({ webhookUrl: webhookUrl.trim(), autoSync });
-    setSyncStatusMsg('Sync ဆက်တင် သိမ်းဆည်းပြီးပါပြီ။');
+    setSyncStatusMsg('✔ Sync ဆက်တင် သိမ်းဆည်းပြီးပါပြီ။');
     setTimeout(() => setSyncStatusMsg(null), 4000);
   }
 
@@ -53,9 +57,25 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
     const res = await testWebhookConnection(webhookUrl.trim());
     setSyncBusy(false);
     if (res.ok) {
-      setSyncStatusMsg('✔ Google Sheet သို့ ချိတ်ဆက်မှု အောင်မြင်ပါသည်!');
+      setSyncStatusMsg('✔ Google Sheet သို့ ချိတ်ဆက်မှု အောင်မြင်ပါသည် (Ping OK)');
     } else {
-      setSyncStatusMsg(`❌ ချိတ်ဆက်၍မရပါ: ${res.error ?? 'Unknown error'}`);
+      setSyncStatusMsg(`❌ ချိတ်ဆက်၍မရပါ: ${res.error ?? 'အမှားရှိသည်'}`);
+    }
+  }
+
+  async function handleRetryPending() {
+    if (!webhookUrl.trim()) {
+      setSyncStatusMsg('Webhook URL ထည့်ပါ');
+      return;
+    }
+    setSyncBusy(true);
+    setSyncStatusMsg('ပို့ရန်ကျန်ဒေတာများ ပို့နေသည်…');
+    const res = await log.retryPendingNow();
+    setSyncBusy(false);
+    if (res.ok) {
+      setSyncStatusMsg(res.count === 0 ? '✔ ပို့ရန်ကျန်သော မှတ်တမ်းမရှိပါ' : `✔ မှတ်တမ်း ${res.count} ခု Google Sheet သို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ!`);
+    } else {
+      setSyncStatusMsg(`❌ မအောင်မြင်ပါ: ${res.error ?? 'အင်တာနက်စစ်ပါ'}`);
     }
   }
 
@@ -65,11 +85,11 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
       return;
     }
     setSyncBusy(true);
-    setSyncStatusMsg('ဒေတာများ ပို့နေသည်…');
+    setSyncStatusMsg('ဒေတာအားလုံး ပို့နေသည်…');
     const res = await log.syncAllNow();
     setSyncBusy(false);
     if (res.ok) {
-      setSyncStatusMsg(`✔ မှတ်တမ်း ${res.count} ခု Google Sheet သို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ!`);
+      setSyncStatusMsg(`✔ မှတ်တမ်းအားလုံး (${res.count} ခု) Google Sheet သို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ!`);
     } else {
       setSyncStatusMsg(`❌ ပို့၍မရပါ: ${res.error ?? 'အင်တာနက် သို့မဟုတ် Webhook စစ်ပါ'}`);
     }
@@ -110,19 +130,6 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
     download(payload.name, payload.json, 'application/json');
   }
 
-  function addMedication() {
-    if (medName.trim() === '') return;
-    if (log.addMedication({ name: medName, dose: medDose, notes: '' })) {
-      setMedName('');
-      setMedDose('');
-      setMedMessage('ထည့်ပြီးပါပြီ။');
-    }
-  }
-
-  function exportCsv() {
-    download(`thwaymattam-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(log.readings), 'text/csv;charset=utf-8');
-  }
-
   async function onFile(file: File | undefined) {
     setReplaceArmed(false);
     setMessage(null);
@@ -130,7 +137,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
     if (!file) return;
     if (file.size > MAX_IMPORT_BYTES) {
       setPreview(null);
-      setMessage('ဖိုင်ကြီးလွန်းသည်။ ဓာတ်ပုံမပါသော JSON ဘက်အပ်ကိုသာ လက်ခံသည်။');
+      setMessage('ဖိုင်ကြီးလွန်းသည်။ JSON ဘက်အပ်ကိုသာ လက်ခံသည်။');
       return;
     }
     let json: unknown;
@@ -180,68 +187,268 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
     }
   }
 
+  function addMedication() {
+    if (medName.trim() === '') return;
+    if (log.addMedication({ name: medName, dose: medDose, notes: '' })) {
+      setMedName('');
+      setMedDose('');
+      setMedMessage('ထည့်ပြီးပါပြီ။');
+      setTimeout(() => setMedMessage(null), 3000);
+    }
+  }
+
   return (
     <div className="stack more-view">
       <h2>ပိုမို</h2>
-      <section className="card stack" id="share-backup">
-        <div className="more-head">
-          <span className="icon-well icon-well-lg" aria-hidden="true"><ShareIcon /></span>
-          <h3>ဖုန်းတစ်လုံးဆီ ပို့ရန်</h3>
-        </div>
-        <p className="more-explainer">မှတ်တမ်းတစ်ခုလုံးကို JSON ဖိုင်အဖြစ် ပို့သည်။ ဖုန်းက မျှဝေစာမျက်နှာ ပေးလျှင် Viber သို့မဟုတ် Telegram ကို ရွေးပါ။ မပေးလျှင် ဖိုင်ကို ဒေါင်းလုဒ်လုပ်ပါသည်။ အလိုအလျောက် ချိန်ကိုက်ခြင်း မရှိပါ။</p>
-        <ShareBackupButton />
-      </section>
+
+      {/* 1. Google Sheets Auto-Sync & Diagnostics (Main Cloud Backup) */}
       <section className="card stack">
         <div className="more-head">
           <span className="icon-well icon-well-lg" aria-hidden="true"><CloudIcon /></span>
-          <h3>ဘက်အပ်</h3>
+          <div>
+            <h3 style={{ margin: 0 }}>Google Sheets Auto-Sync</h3>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
+              ဖုန်းထဲက ဒေတာများကို မိမိ၏ Google Sheet သို့ အလိုအလျောက် ပို့ပေးပါသည်
+            </p>
+          </div>
         </div>
-        <p className="more-explainer">JSON သည် ပြန်သွင်းရန်ဖြစ်သည်။ ပုံမှန်အားဖြင့် ပေါင်းထည့်သည်။ တူညီသော မှတ်တမ်းကို ဒုတိယအကြိမ် သွင်းလျှင် ထပ်မတည်ပါ။ CSV သည် ဇယားကြည့်ရန်ဖြစ်ပြီး ဖော်မြူလာအဖြစ် မဖွင့်အောင် ရှေ့တွင် အပေါစထရိုဖီထည့်ထားသည်။</p>
-        <div className="row">
-          <button type="button" className="btn btn-quiet" onClick={exportJson}><DownloadIcon />JSON ဒေါင်းလုဒ်</button>
-          <button type="button" className="btn btn-quiet" onClick={exportCsv}><DownloadIcon />CSV ထုတ်မည်</button>
-        </div>
-        <label className="upload-tile">
-          <UploadIcon />
-          <span>JSON သွင်းမည်</span>
-          <input className="sr-only" type="file" accept="application/json,.json" onChange={(event) => void onFile(event.target.files?.[0])} />
+
+        {/* Webhook Configuration Inputs */}
+        <label className="field">
+          Google Apps Script Webhook URL
+          <input
+            type="url"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/.../exec"
+          />
         </label>
-        {preview?.result.ok ? (
-          <div className="stack">
-            <p className="file-pill"><DocIcon />{preview.fileName}</p>
-            <p className="banner info" role="status">{importPreviewSummary(preview.accepted.length, preview.duplicateCount, preview.updates.length)}{preview.result.rejected.length > 0 ? ` ပယ်ထားသော ${preview.result.rejected.length} ခု ပါသည်။` : ''}{preview.medications.length > 0 ? ` ဆေးဝါးစာရင်း ${preview.medications.length} ခု ပါမည်။` : ''}</p>
-            {preview.result.rejected.length > 0 ? (
-              <ul className="rejected-list">
-                {preview.result.rejected.slice(0, 8).map((row) => (
-                  <li key={row.index}>အတန်း {row.index + 1}: {row.errors.map((issue) => issue.code).join(', ')}</li>
-                ))}
-              </ul>
+
+        {/* Clean Auto-Sync Toggle Box */}
+        <label className="sync-toggle-row">
+          <input
+            type="checkbox"
+            checked={autoSync}
+            onChange={(e) => setAutoSync(e.target.checked)}
+          />
+          <span>တိုင်းတာမှုအသစ် ထည့်ပြီးတိုင်း Google Sheet သို့ အလိုအလျောက် ပို့မည် (Auto-Sync)</span>
+        </label>
+
+        {/* Settings Action Buttons */}
+        <div className="btn-grid-2">
+          <button type="button" className="btn btn-primary" onClick={handleSaveSync}>
+            ဆက်တင်သိမ်းမည်
+          </button>
+          <button
+            type="button"
+            className="btn btn-quiet"
+            disabled={syncBusy || !webhookUrl.trim()}
+            onClick={handleTestWebhook}
+          >
+            {syncBusy ? 'စစ်ဆေးနေ…' : 'ချိတ်ဆက်မှု စမ်းသပ်မည်'}
+          </button>
+        </div>
+
+        {/* Sync Diagnostics Dashboard Box */}
+        <div className="sync-diag-box">
+          <div className="diag-stat-row">
+            <div className="diag-stat-tile">
+              <span className="diag-stat-label">Pending (ပို့ရန်ကျန်)</span>
+              <strong className={`diag-stat-value ${log.syncStats.pendingCount > 0 ? 'text-warning' : 'text-success'}`}>
+                {log.syncStats.pendingCount > 0 ? `⏳ ${log.syncStats.pendingCount} ခု` : '✔ မရှိပါ'}
+              </strong>
+            </div>
+            <div className="diag-stat-tile">
+              <span className="diag-stat-label">နောက်ဆုံး အောင်မြင်ချိန်</span>
+              <strong className="diag-stat-value">
+                {formatSyncTimestamp(log.syncStats.lastSuccessTime)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="diag-mini-breakdown">
+            <span>စုစုပေါင်း: <strong>{log.syncStats.totalReadings}</strong> ခု</span>
+            <span>•</span>
+            <span className="text-success">ရောက်ရှိပြီး: <strong>{log.syncStats.syncedCount}</strong></span>
+            {log.syncStats.failedCount > 0 ? (
+              <>
+                <span>•</span>
+                <span className="text-danger">မအောင်မြင်: <strong>{log.syncStats.failedCount}</strong></span>
+              </>
             ) : null}
-            <button type="button" className="btn btn-primary" disabled={preview.accepted.length + preview.updates.length === 0} onClick={() => confirm('merge')}>ပေါင်းထည့်မည်</button>
-            <label className="replace-row">
+          </div>
+
+          {syncStatusMsg ? (
+            <p className="banner info" role="status" style={{ margin: 0 }}>{syncStatusMsg}</p>
+          ) : null}
+
+          {/* Primary Retry Button */}
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            disabled={syncBusy || !webhookUrl.trim() || (log.syncStats.pendingCount === 0 && log.syncStats.failedCount === 0)}
+            onClick={handleRetryPending}
+          >
+            {syncBusy ? 'ပို့နေသည်…' : '🔄 ပို့ရန်ကျန်ဒေတာ ပြန်ပို့မည် (Retry)'}
+          </button>
+
+          {/* Secondary Actions Grid */}
+          <div className="btn-grid-2">
+            <button
+              type="button"
+              className="btn btn-quiet"
+              disabled={syncBusy || !webhookUrl.trim() || log.readings.length === 0}
+              onClick={handleSyncAllNow}
+            >
+              ဒေတာအားလုံး ပြန်ပို့မည် ({log.readings.length})
+            </button>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={() => setShowDiagModal(true)}
+            >
+              စစ်ဆေးမှု အပြည့်အစုံ
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Apps Script Help */}
+        <button
+          type="button"
+          className="btn btn-quiet btn-small"
+          onClick={() => setShowScriptHelp(!showScriptHelp)}
+        >
+          {showScriptHelp ? '▲ Google Sheet သတ်မှတ်ပုံ ပိတ်မည်' : '▼ Google Sheet Webhook ပြုလုပ်နည်း (၃ မိနစ်)'}
+        </button>
+
+        {showScriptHelp ? (
+          <div className="stack help-box" style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px' }}>
+            <h4 style={{ margin: '4px 0', fontSize: '14px' }}>Google Sheets တွင် Webhook ပြုလုပ်နည်း အဆင့်ဆင့်</h4>
+            <ol className="help-steps" style={{ paddingLeft: '18px', lineHeight: '1.6', fontSize: '13px', margin: '4px 0' }}>
+              <li>မိမိ Google Drive တွင် Google Sheet အသစ်တစ်ခု ဖွင့်ပါ။</li>
+              <li>အပေါ် Menu မှ <strong>Extensions &gt; Apps Script</strong> ကို နှိပ်ပါ။</li>
+              <li>ရှိနေသော ကုဒ်များကို ဖျက်ပြီး အောက်ပါ ကုဒ်ကို ကူးထည့်ပါ:</li>
+            </ol>
+            <div style={{ position: 'relative' }}>
+              <pre className="script-code-block" style={{ background: '#e2e8f0', padding: '10px', borderRadius: '8px', fontSize: '12px', overflowX: 'auto', maxHeight: '160px' }}>
+                {SYNC_WEBHOOK_SCRIPT_TEMPLATE}
+              </pre>
+              <button
+                type="button"
+                className="btn btn-small btn-primary"
+                style={{ marginTop: '8px', width: '100%' }}
+                onClick={copyScriptCode}
+              >
+                {copiedScript ? '✔ ကူးယူပြီးပါပြီ' : '📋 ကုဒ်အားလုံး ကူးယူမည်'}
+              </button>
+            </div>
+            <ol start={4} className="help-steps" style={{ paddingLeft: '18px', lineHeight: '1.6', fontSize: '13px', margin: '4px 0' }}>
+              <li>ညာဘက်အပေါ်ရှိ <strong>Deploy &gt; New deployment</strong> ကို နှိပ်ပါ။</li>
+              <li>Select type ဘေးရှိ ဂီယာပုံစံမှ <strong>Web app</strong> ကို ရွေးပါ။</li>
+              <li><strong>Who has access: Anyone</strong> (အရေးကြီးသည်) ဟု ရွေးပြီး <strong>Deploy</strong> နှိပ်ပါ။</li>
+              <li>ရရှိလာသော Web app URL ကို ကူးယူပြီး အထက်ပါ ကွက်လပ်တွင် ထည့်ပါ။</li>
+            </ol>
+          </div>
+        ) : null}
+      </section>
+
+      {/* 2. Google Drive / Phone JSON Backup & Restore */}
+      <section className="card stack">
+        <div className="more-head">
+          <span className="icon-well icon-well-lg" aria-hidden="true"><DownloadIcon /></span>
+          <div>
+            <h3 style={{ margin: 0 }}>ဖိုင်ဘက်အပ် (Google Drive / ဖုန်းထဲ သိမ်းရန်)</h3>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
+              မှတ်တမ်းအားလုံးကို JSON ဖိုင်အဖြစ် Google Drive သို့မဟုတ် ဖုန်းထဲ သိမ်းဆည်းနိုင်ပြီး အချိန်မရွေး ပြန်သွင်းနိုင်ပါသည်
+            </p>
+          </div>
+        </div>
+
+        <div className="btn-grid-2">
+          <button type="button" className="btn btn-quiet" onClick={exportJson}>
+            <DownloadIcon />
+            JSON ဘက်အပ် ဒေါင်းလုဒ်
+          </button>
+          <label className="upload-tile-compact">
+            <UploadIcon />
+            <span>ဘက်အပ် ပြန်သွင်းမည်</span>
+            <input
+              className="sr-only"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => void onFile(event.target.files?.[0])}
+            />
+          </label>
+        </div>
+
+        {preview?.result.ok ? (
+          <div className="stack" style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px' }}>
+            <p className="file-pill" style={{ margin: 0 }}><DocIcon />{preview.fileName}</p>
+            <p className="banner info" role="status" style={{ margin: 0 }}>
+              {importPreviewSummary(preview.accepted.length, preview.duplicateCount, preview.updates.length)}
+              {preview.result.rejected.length > 0 ? ` ပယ်ထားသော ${preview.result.rejected.length} ခု ပါသည်။` : ''}
+              {preview.medications.length > 0 ? ` ဆေးဝါးစာရင်း ${preview.medications.length} ခု ပါမည်။` : ''}
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              disabled={preview.accepted.length + preview.updates.length === 0}
+              onClick={() => confirm('merge')}
+            >
+              ပေါင်းထည့်မည် (Merge)
+            </button>
+            <label className="replace-row" style={{ marginTop: '4px' }}>
               <input type="checkbox" checked={replaceArmed} onChange={(event) => setReplaceArmed(event.target.checked)} />
               <span>လက်ရှိမှတ်တမ်းအားလုံးကို ဖျက်ပြီး အစားထိုးမည်ကို နားလည်ပါသည်</span>
             </label>
-            <button type="button" className="btn btn-danger" disabled={!replaceArmed} onClick={() => confirm('replace')}>အစားထိုးမည်</button>
+            <button
+              type="button"
+              className="btn btn-danger btn-block"
+              disabled={!replaceArmed}
+              onClick={() => confirm('replace')}
+            >
+              အစားထိုးမည် (Replace All)
+            </button>
           </div>
         ) : null}
         {message ? <p id="import-summary" className={`banner ${messageTone}`} role="status">{message}</p> : null}
       </section>
+
+      {/* 3. Doctor's Summary Report & Gmail Report */}
       <section className="card stack">
         <div className="more-head">
           <span className="icon-well icon-well-lg" aria-hidden="true"><DocIcon /></span>
-          <h3>ဆရာဝန်အတွက် စာရွက်</h3>
+          <div>
+            <h3 style={{ margin: 0 }}>အစီရင်ခံစာများ</h3>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
+              ဆရာဝန်ပြသရန် စာရွက်နှင့် Gmail သို့ အနှစ်ချုပ် ပေးပို့ခြင်း
+            </p>
+          </div>
         </div>
-        <button type="button" className="btn btn-primary btn-block" onClick={onPrint}>အနှစ်ချုပ် ပြင်ဆင်မည်<ArrowRightIcon /></button>
+        <div className="btn-grid-2">
+          <button type="button" className="btn btn-primary" onClick={onPrint}>
+            ဆရာဝန်အတွက် စာရွက်<ArrowRightIcon />
+          </button>
+          <button type="button" className="btn btn-quiet" onClick={sendEmailReport}>
+            ✉ Gmail သို့ ပို့မည်
+          </button>
+        </div>
       </section>
+
+      {/* 4. Medications List (Compact) */}
       <section className="card stack">
         <div className="more-head">
           <span className="icon-well icon-well-lg" aria-hidden="true"><PillIcon /></span>
-          <h3>ဆေးဝါးစာရင်း</h3>
+          <div>
+            <h3 style={{ margin: 0 }}>ဆေးဝါးစာရင်း</h3>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
+              ဆရာဝန်အတွက် စာရွက်တွင် ပြသမည့် သောက်ဆေးများ
+            </p>
+          </div>
         </div>
-        <p className="more-explainer">ဆရာဝန်အတွက် အနှစ်ချုပ်တွင် ပြမည်။ ဖုန်းထဲမှာပဲ သိမ်းသည်။ ဆေးပမာဏကို ဤအက်ပ်က မညွှန်ပါ။</p>
+
         {log.medications.length === 0 ? (
-          <p className="med-empty">ဆေးဝါးစာရင်း မရှိပါ။</p>
+          <p className="muted" style={{ margin: 0, fontSize: '13px' }}>ဆေးဝါးစာရင်း မရှိသေးပါ။</p>
         ) : (
           <ul className="med-list">
             {log.medications.map((medication) => (
@@ -264,43 +471,48 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
             ))}
           </ul>
         )}
-        <label className="field">ဆေးအမည်
-          <input value={medName} onChange={(event) => setMedName(event.target.value)} autoComplete="off" placeholder="ဥပမာ Metformin" />
-        </label>
-        <label className="field">ပမာဏ / သောက်ပုံ (မထည့်လည်းရ)
-          <input value={medDose} onChange={(event) => setMedDose(event.target.value)} autoComplete="off" placeholder="ဥပမာ 500 mg · မနက် ၁ လုံး" />
-        </label>
-        <button type="button" className="btn btn-primary" disabled={medName.trim() === ''} onClick={addMedication}><PlusIcon />ထည့်မည်</button>
+
+        <div className="btn-grid-2">
+          <label className="field" style={{ margin: 0 }}>
+            ဆေးအမည်
+            <input value={medName} onChange={(event) => setMedName(event.target.value)} autoComplete="off" placeholder="Metformin" />
+          </label>
+          <label className="field" style={{ margin: 0 }}>
+            ပမာဏ / သောက်ပုံ
+            <input value={medDose} onChange={(event) => setMedDose(event.target.value)} autoComplete="off" placeholder="500 mg · မနက် ၁ လုံး" />
+          </label>
+        </div>
+        <button type="button" className="btn btn-quiet" disabled={medName.trim() === ''} onClick={addMedication}>
+          <PlusIcon />ဆေးထည့်မည်
+        </button>
         {medMessage ? <p className="status-pill" role="status">{medMessage}</p> : null}
       </section>
-      {log.demo ? (
-        <section className="card stack">
-          <div className="more-head">
-            <span className="icon-well icon-well-lg icon-well-danger" aria-hidden="true"><TrashIcon /></span>
-            <h3>data အကုန် ရှင်း</h3>
+
+      {/* 5. Clear Data (Danger Zone) */}
+      <section className="card stack danger-zone">
+        <div className="more-head">
+          <span className="icon-well icon-well-lg icon-well-danger" aria-hidden="true"><TrashIcon /></span>
+          <div>
+            <h3 style={{ margin: 0 }}>Data အကုန်ရှင်း</h3>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
+              ဖုန်းထဲရှိ ပင်မမှတ်တမ်း {log.readings.length} ခုကို အပြီးရှင်းမည်
+            </p>
           </div>
-          <p className="banner info">နမူနာခန်းမှာ ရှိနေသည်။ ပင်မမှတ်တမ်း data ရှင်းရန် ပင်မမှတ်တမ်းသို့ ပြန်ပါ။</p>
-        </section>
-      ) : (
-        <section className="card stack danger-zone">
-          <div className="more-head">
-            <span className="icon-well icon-well-lg icon-well-danger" aria-hidden="true"><TrashIcon /></span>
-            <h3>data အကုန် ရှင်း</h3>
-          </div>
-          <p className="danger-count">ပင်မမှတ်တမ်း {log.readings.length} ခု နှင့် ဆေးဝါးစာရင်း {log.medications.length} မျိုး ကို အကုန် ဖျက်မည်။ ဖျက်ပြီးရင် ပြန်မရပါ။ မဖျက်ခင် JSON ဘက်အပ် ထုတ်ထားပါ။</p>
-          <button
-            type="button"
-            className="btn btn-danger btn-block"
-            disabled={log.readings.length === 0 && log.medications.length === 0}
-            onClick={() => setClearOpen(true)}
-          >
-            data အကုန် ရှင်းမည်
-          </button>
-          {clearMessage ? <p className="status-pill" role="status">{clearMessage}</p> : null}
-        </section>
-      )}
+        </div>
+        <button
+          type="button"
+          className="btn btn-danger btn-block"
+          disabled={log.readings.length === 0 && log.medications.length === 0}
+          onClick={() => setClearOpen(true)}
+        >
+          Data အကုန်ရှင်းမည်
+        </button>
+        {clearMessage ? <p className="status-pill" role="status">{clearMessage}</p> : null}
+      </section>
+
+      {/* Clear Confirmation Modal */}
       {clearOpen ? (
-        <Modal title="data အကုန် ရှင်းမည်" heroIcon={<WarningIcon />} onClose={() => setClearOpen(false)}>
+        <Modal title="Data အကုန်ရှင်းမည်" heroIcon={<WarningIcon />} onClose={() => setClearOpen(false)}>
           <p>ပင်မမှတ်တမ်း {log.readings.length} ခု နှင့် ဆေးဝါးစာရင်း {log.medications.length} မျိုး ကို အကုန် ဖျက်မည်။ ဖျက်ပြီးရင် ပြန်မရပါ။</p>
           <p className="modal-question">JSON ဘက်အပ် ထုတ်ထားပြီးပြီလား။</p>
           <div className="row">
@@ -320,165 +532,11 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
           </div>
         </Modal>
       ) : null}
-      <section className="card stack">
-        <div className="more-head">
-          <span className="icon-well icon-well-lg" aria-hidden="true"><SparkleIcon /></span>
-          <h3>နမူနာ</h3>
-        </div>
-        <p className="more-explainer">နမူနာသည် သီးခြားသိမ်းဆည်းမှုဖြစ်ပြီး တကယ်လူနာမှတ်တမ်းမဟုတ်ပါ။ ပင်မမှတ်တမ်းကို မဖျက်ပါ။</p>
-        <button type="button" className={`btn ${log.demo ? 'btn-primary' : 'btn-quiet'}`} onClick={() => log.setDemo(!log.demo)}>
-          {log.demo ? 'ပင်မမှတ်တမ်းသို့ ပြန်မည်' : 'နမူနာကြည့်မည်'}
-        </button>
-      </section>
-      <section className="card stack">
-        <div className="more-head">
-          <span className="icon-well icon-well-lg" aria-hidden="true"><DatabaseIcon /></span>
-          <h3>သိုလှောင်မှု</h3>
-        </div>
-        <div className="stat-row">
-          <div className="stat-tile">
-            <span className="stat-value">{log.readings.length} ခု</span>
-            <span className="stat-label">မှတ်တမ်း</span>
-          </div>
-          {log.byteSize != null ? (
-            <div className="stat-tile">
-              <span className="stat-value">{log.byteSize} ဘိုက်</span>
-              <span className="stat-label">ခန့်မှန်း</span>
-            </div>
-          ) : null}
-          <div className="stat-tile">
-            <span className="stat-value">{log.demo ? 'နမူနာခန်း' : 'ပင်မခန်း'}</span>
-          </div>
-        </div>
-        <p className="more-explainer">ဒေတာသည် ဤဘရောက်ဇာထဲတွင် ရှိသည်။ အခြားဖုန်းသို့ JSON ဖိုင်ကို ကိုယ်တိုင်ပို့မှ ရောက်သည်။ အလိုအလျောက် ချိန်ကိုက်ခြင်း၊ အဝေးမှ စောင့်ကြည့်ခြင်း မရှိပါ။ ဘရောက်ဇာဒေတာဖျက်လျှင် မှတ်တမ်းပါ ပျောက်သည်။</p>
-        {log.loadError === 'corrupt' && log.rawBackup ? (
-          <button type="button" className="btn btn-quiet" onClick={() => download('thwaymattam-raw.txt', log.rawBackup ?? '', 'text/plain')}><DownloadIcon />ပျက်နေသောစာသား ထုတ်မည်</button>
-        ) : null}
-      </section>
-      
-      <section className="card stack">
-        <div className="more-head">
-          <span className="icon-well icon-well-lg" aria-hidden="true"><CloudIcon /></span>
-          <h3>Google Sheets Auto-Sync (Cloud သိမ်းဆည်းခြင်း)</h3>
-        </div>
-        <p className="more-explainer">
-          အင်တာနက်ရရှိချိန်တိုင်း ဖုန်းမှ ဒေတာများကို မိမိ၏ Private Google Sheet သို့ အလိုအလျောက် ပို့ပေးပါသည်။
-          ဖုန်းပျက်ခြင်း၊ Browser Cache ရှင်းမိခြင်းများ ဖြစ်ပေါ်ပါက Google Sheet ထဲတွင် မှတ်တမ်းများ အပြည့်အစုံ ကျန်ရှိနေမည်ဖြစ်ပါသည်။
-        </p>
 
-        <label className="field">
-          Google Apps Script Webhook URL
-          <input
-            type="url"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-            placeholder="https://script.google.com/macros/s/.../exec"
-          />
-        </label>
-
-        <label className="replace-row">
-          <input
-            type="checkbox"
-            checked={autoSync}
-            onChange={(e) => setAutoSync(e.target.checked)}
-          />
-          <span>တိုင်းတာမှုအသစ် ထည့်ပြီးတိုင်း Google Sheet သို့ အလိုအလျောက် ပို့မည် (Auto-Sync)</span>
-        </label>
-
-        <div className="row">
-          <button type="button" className="btn btn-primary" onClick={handleSaveSync}>
-            ဆက်တင်သိမ်းမည်
-          </button>
-          <button
-            type="button"
-            className="btn btn-quiet"
-            disabled={syncBusy || !webhookUrl.trim()}
-            onClick={handleTestWebhook}
-          >
-            {syncBusy ? 'စစ်ဆေးနေ…' : 'ချိတ်ဆက်မှု စမ်းသပ်မည်'}
-          </button>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-quiet btn-block"
-          disabled={syncBusy || !webhookUrl.trim() || log.readings.length === 0}
-          onClick={handleSyncAllNow}
-        >
-          ☁ ဒေတာအားလုံး ({log.readings.length} ခု) ကို Google Sheet သို့ အခုပို့မည်
-        </button>
-
-        {syncStatusMsg ? (
-          <p className="banner info" role="status">{syncStatusMsg}</p>
-        ) : null}
-
-        <button
-          type="button"
-          className="btn btn-quiet btn-small"
-          onClick={() => setShowScriptHelp(!showScriptHelp)}
-        >
-          {showScriptHelp ? '▲ Google Sheet သတ်မှတ်ပုံ ပိတ်မည်' : '▼ Google Sheet သတ်မှတ်ပုံ ညွှန်ကြားချက် ကြည့်မည်'}
-        </button>
-
-        {showScriptHelp ? (
-          <div className="stack help-box">
-            <h4 style={{ margin: '8px 0 4px', fontSize: '15px' }}>Google Sheets တွင် Webhook ပြုလုပ်နည်း (၃ မိနစ်)</h4>
-            <ol className="help-steps" style={{ paddingLeft: '20px', lineHeight: '1.6', fontSize: '13px' }}>
-              <li>မိမိ Google Drive တွင် Google Sheet အသစ်တစ်ခု ဖွင့်ပါ။</li>
-              <li>အပေါ် Menu မှ <strong>Extensions &gt; Apps Script</strong> ကို နှိပ်ပါ။</li>
-              <li>ရှိနေသော ကုဒ်များကို ဖျက်ပြီး အောက်ပါ ကုဒ်ကို ကူးထည့်ပါ:</li>
-            </ol>
-            <div style={{ position: 'relative' }}>
-              <pre className="script-code-block" style={{ background: '#f1f5f9', padding: '12px', borderRadius: '12px', fontSize: '12px', overflowX: 'auto', maxHeight: '180px' }}>
-                {SYNC_WEBHOOK_SCRIPT_TEMPLATE}
-              </pre>
-              <button
-                type="button"
-                className="btn btn-small btn-primary"
-                style={{ marginTop: '8px' }}
-                onClick={copyScriptCode}
-              >
-                {copiedScript ? '✔ ကူးယူပြီးပါပြီ' : '📋 ကုဒ်အားလုံး ကူးမည်'}
-              </button>
-            </div>
-            <ol start={4} className="help-steps" style={{ paddingLeft: '20px', lineHeight: '1.6', fontSize: '13px' }}>
-              <li>ညာဘက်အပေါ်ရှိ <strong>Deploy &gt; New deployment</strong> ကို နှိပ်ပါ။</li>
-              <li>Select type ဘေးရှိ ဂီယာပုံစံမှ <strong>Web app</strong> ကို ရွေးပါ။</li>
-              <li><strong>Who has access: Anyone</strong> (အရေးကြီးသည်) ဟု ရွေးပြီး <strong>Deploy</strong> နှိပ်ပါ။</li>
-              <li>ရရှိလာသော Web app URL ကို ကူးယူပြီး အထက်ပါ ကွက်လပ်တွင် ထည့်ပါ။</li>
-            </ol>
-          </div>
-        ) : null}
-      </section>
-
-      <section className="card stack">
-        <div className="more-head">
-          <span className="icon-well icon-well-lg" aria-hidden="true"><ShareIcon /></span>
-          <h3>Gmail သို့ အစီရင်ခံစာ ပို့ရန်</h3>
-        </div>
-        <p className="more-explainer">
-          အဖေ့သွေးမှတ်တမ်း နောက်ဆုံးအခြေအနေကို <strong>khinelintun91@gmail.com</strong> သို့ အီးမေးလ် ပေးပို့နိုင်ပါသည်။
-        </p>
-        <button type="button" className="btn btn-primary" onClick={sendEmailReport}>
-          ✉ Gmail ဖြင့် မှတ်တမ်းအနှစ်ချုပ် ပို့မည်
-        </button>
-      </section>
-
-      <section className="card stack">
-        <div className="more-head">
-          <span className="icon-well icon-well-lg" aria-hidden="true"><WifiOffIcon /></span>
-          <h3>အော့ဖ်လိုင်း</h3>
-        </div>
-        <p className="more-explainer">ပထမအကြိမ် ဖွင့်သောအခါ အက်ပ်နှင့် ဖောင့်ကို ဤစက်ထဲသို့ ရယူသည်။ ထို့နောက် မှတ်တမ်းတင်ခြင်းသည် အင်တာနက်မလိုပါ။ နံပါတ်ကို ဆာဗာသို့ မပို့ပါ။</p>
-      </section>
-      <section className="card stack more-last">
-        <div className="more-head">
-          <span className="icon-well icon-well-lg" aria-hidden="true"><InfoIcon /></span>
-          <h3>ဤအက်ပ်အကြောင်း</h3>
-        </div>
-        <p className="more-explainer">သွေးမှတ်တမ်းသည် ကိုယ်တိုင်သုံးသော ဂလူးကို့စ်နှင့် သွေးပေါင် မှတ်စုဖြစ်သည်။ အချိန်ကို မြန်မာစံတော်ချိန် Asia/Rangoon (UTC+6:30) ဖြင့် ပြသည်။</p>
-        <p className="more-explainer">ရောဂါမရှာပါ။ အင်ဆူလင် သို့မဟုတ် ဆေးပမာဏ မညွှန်ပါ။ မသိသော အစာစားချိန်ကို ပုံမှန်ဟု မပြပါ။</p>
-      </section>
+      {/* Diagnostics Full Modal */}
+      {showDiagModal ? (
+        <SyncDiagnosticsModal onClose={() => setShowDiagModal(false)} />
+      ) : null}
     </div>
   );
 }
@@ -501,15 +559,6 @@ function MoreIcon({ children }: { children: React.ReactNode }) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {children}
     </svg>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <MoreIcon>
-      <path d="m22 2-7 20-4-9-9-4Z" />
-      <path d="M22 2 11 13" />
-    </MoreIcon>
   );
 }
 
@@ -558,36 +607,6 @@ function PillIcon() {
     <MoreIcon>
       <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
       <path d="m8.5 8.5 7 7" />
-    </MoreIcon>
-  );
-}
-
-function SparkleIcon() {
-  return (
-    <MoreIcon>
-      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
-    </MoreIcon>
-  );
-}
-
-function DatabaseIcon() {
-  return (
-    <MoreIcon>
-      <ellipse cx="12" cy="5" rx="9" ry="3" />
-      <path d="M3 5v14a9 3 0 0 0 18 0V5" />
-      <path d="M3 12a9 3 0 0 0 18 0" />
-    </MoreIcon>
-  );
-}
-
-function WifiOffIcon() {
-  return (
-    <MoreIcon>
-      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-      <path d="M12 20h.01" />
-      <path d="m2 2 20 20" />
     </MoreIcon>
   );
 }

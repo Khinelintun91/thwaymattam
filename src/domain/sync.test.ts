@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeSyncStats,
   formatReadingForSheet,
+  formatSyncTimestamp,
   loadSyncConfig,
   saveSyncConfig,
   loadSyncStatuses,
   setReadingSyncStatus,
+  loadSyncMeta,
+  recordSyncResult,
 } from './sync.ts';
-import type { GlucoseReading, BpReading } from './types.ts';
+import type { GlucoseReading, BpReading, Reading } from './types.ts';
 import type { StorageLike } from './storage.ts';
 
 function memoryStorage(): StorageLike {
@@ -84,5 +88,58 @@ describe('Google Sheets Sync helper', () => {
     setReadingSyncStatus('r-2', 'failed', 'Network down', storage);
     expect(loadSyncStatuses(storage)['r-2']?.status).toBe('failed');
     expect(loadSyncStatuses(storage)['r-2']?.error).toBe('Network down');
+  });
+
+  it('saves, loads, and records sync metadata', () => {
+    const storage = memoryStorage();
+    const initial = loadSyncMeta(storage);
+    expect(initial.lastSuccessTime).toBeNull();
+
+    recordSyncResult({ ok: true, count: 5 }, storage);
+    const updated = loadSyncMeta(storage);
+    expect(updated.lastStatus).toBe('success');
+    expect(updated.lastSyncedCount).toBe(5);
+    expect(updated.lastSuccessTime).toBeTruthy();
+
+    recordSyncResult({ ok: false, error: 'Offline' }, storage);
+    const failed = loadSyncMeta(storage);
+    expect(failed.lastStatus).toBe('failed');
+    expect(failed.lastError).toBe('Offline');
+    // lastSuccessTime should be preserved
+    expect(failed.lastSuccessTime).toBe(updated.lastSuccessTime);
+  });
+
+  it('computes sync statistics accurately', () => {
+    const readings: Reading[] = [
+      { id: '1', type: 'glucose', recordedAt: '2026-11-09T08:00:00.000Z' } as Reading,
+      { id: '2', type: 'bp', recordedAt: '2026-11-09T10:00:00.000Z' } as Reading,
+      { id: '3', type: 'glucose', recordedAt: '2026-11-09T12:00:00.000Z' } as Reading,
+    ];
+    const statuses = {
+      '1': { status: 'synced' as const, syncedAt: '2026-11-09T08:05:00.000Z' },
+      '2': { status: 'failed' as const, error: 'Timeout' },
+      // '3' has no status yet -> pending
+    };
+    const meta = {
+      lastSuccessTime: '2026-11-09T08:05:00.000Z',
+      lastAttemptTime: '2026-11-09T10:05:00.000Z',
+      lastStatus: 'failed' as const,
+      lastError: 'Timeout',
+    };
+
+    const stats = computeSyncStats(readings, statuses, meta);
+    expect(stats.totalReadings).toBe(3);
+    expect(stats.syncedCount).toBe(1);
+    expect(stats.failedCount).toBe(1);
+    expect(stats.pendingCount).toBe(1);
+    expect(stats.lastSuccessTime).toBe('2026-11-09T08:05:00.000Z');
+    expect(stats.lastError).toBe('Timeout');
+  });
+
+  it('formats sync timestamps in Burmese', () => {
+    expect(formatSyncTimestamp(null)).toBe('မရှိသေးပါ');
+    expect(formatSyncTimestamp('')).toBe('မရှိသေးပါ');
+    const formatted = formatSyncTimestamp('2026-11-09T08:30:00.000Z');
+    expect(formatted).toContain('နိုဝင်ဘာ');
   });
 });

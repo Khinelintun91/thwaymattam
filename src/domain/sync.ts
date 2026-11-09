@@ -1,10 +1,11 @@
 import type { Reading } from './types.ts';
-import { formatTime12 } from './time.ts';
+import { formatLongDate, formatTime12 } from './time.ts';
 import { MEAL_LABEL, SYMPTOM_LABEL } from './labels.ts';
 import type { StorageLike } from './storage.ts';
 
 export const SYNC_CONFIG_KEY = 'thwaymattam.sync.config.v1';
 export const SYNC_STATUS_KEY = 'thwaymattam.sync.status.v1';
+export const SYNC_META_KEY = 'thwaymattam.sync.meta.v1';
 
 export type SyncStatus = 'synced' | 'pending' | 'failed';
 
@@ -20,9 +21,35 @@ export interface SyncConfig {
   autoSync: boolean;
 }
 
+export interface SyncMeta {
+  lastSuccessTime?: string | null;
+  lastAttemptTime?: string | null;
+  lastStatus?: 'success' | 'failed' | null;
+  lastError?: string | null;
+  lastSyncedCount?: number;
+}
+
+export interface SyncStats {
+  totalReadings: number;
+  syncedCount: number;
+  pendingCount: number;
+  failedCount: number;
+  lastSuccessTime: string | null;
+  lastAttemptTime: string | null;
+  lastError: string | null;
+}
+
 const DEFAULT_CONFIG: SyncConfig = {
   webhookUrl: '',
   autoSync: true,
+};
+
+const DEFAULT_META: SyncMeta = {
+  lastSuccessTime: null,
+  lastAttemptTime: null,
+  lastStatus: null,
+  lastError: null,
+  lastSyncedCount: 0,
 };
 
 function defaultStorage(): StorageLike | null {
@@ -93,6 +120,96 @@ export function setReadingSyncStatus(
   saveSyncStatuses(current, storage);
 }
 
+export function loadSyncMeta(storage: StorageLike | null = defaultStorage()): SyncMeta {
+  if (!storage) return DEFAULT_META;
+  try {
+    const raw = storage.getItem(SYNC_META_KEY);
+    if (!raw) return DEFAULT_META;
+    return { ...DEFAULT_META, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_META;
+  }
+}
+
+export function saveSyncMeta(meta: SyncMeta, storage: StorageLike | null = defaultStorage()): void {
+  if (!storage) return;
+  try {
+    storage.setItem(SYNC_META_KEY, JSON.stringify(meta));
+  } catch {
+    /* ignore storage quota */
+  }
+}
+
+export function recordSyncResult(
+  result: { ok: boolean; count?: number; error?: string },
+  storage: StorageLike | null = defaultStorage(),
+): SyncMeta {
+  const current = loadSyncMeta(storage);
+  const now = new Date().toISOString();
+  const next: SyncMeta = {
+    ...current,
+    lastAttemptTime: now,
+    lastStatus: result.ok ? 'success' : 'failed',
+    lastError: result.ok ? null : (result.error ?? 'Unknown error'),
+    ...(result.ok ? { lastSuccessTime: now, lastSyncedCount: result.count ?? 0 } : {}),
+  };
+  saveSyncMeta(next, storage);
+  return next;
+}
+
+export function computeSyncStats(
+  readings: Reading[],
+  statuses: Record<string, SyncRecordStatus>,
+  meta: SyncMeta,
+): SyncStats {
+  let synced = 0;
+  let pending = 0;
+  let failed = 0;
+
+  for (const r of readings) {
+    const st = statuses[r.id]?.status;
+    if (st === 'synced') {
+      synced++;
+    } else if (st === 'failed') {
+      failed++;
+    } else {
+      pending++;
+    }
+  }
+
+  // Fallback for lastSuccessTime if not in meta: find the most recent syncedAt from statuses
+  let lastSuccessTime = meta.lastSuccessTime ?? null;
+  if (!lastSuccessTime) {
+    for (const r of readings) {
+      const sAt = statuses[r.id]?.syncedAt;
+      if (sAt && (!lastSuccessTime || sAt > lastSuccessTime)) {
+        lastSuccessTime = sAt;
+      }
+    }
+  }
+
+  return {
+    totalReadings: readings.length,
+    syncedCount: synced,
+    pendingCount: pending,
+    failedCount: failed,
+    lastSuccessTime,
+    lastAttemptTime: meta.lastAttemptTime ?? null,
+    lastError: meta.lastError ?? null,
+  };
+}
+
+export function formatSyncTimestamp(isoString: string | null | undefined): string {
+  if (!isoString) return 'မရှိသေးပါ';
+  try {
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return 'မရှိသေးပါ';
+    return `${formatLongDate(d)}၊ ${formatTime12(d)}`;
+  } catch {
+    return 'မရှိသေးပါ';
+  }
+}
+
 export function formatReadingForSheet(reading: Reading) {
   const dateObj = new Date(reading.recordedAt);
   const dateStr = reading.recordedAt.slice(0, 10);
@@ -140,9 +257,12 @@ export function formatReadingForSheet(reading: Reading) {
 export async function postReadingsToWebhook(
   webhookUrl: string,
   readings: Reading[],
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; count?: number; error?: string }> {
   if (!webhookUrl || !webhookUrl.startsWith('http')) {
     return { ok: false, error: 'Webhook URL မမှန်ကန်ပါ' };
+  }
+  if (readings.length === 0) {
+    return { ok: true, count: 0 };
   }
 
   const payload = {
@@ -161,25 +281,25 @@ export async function postReadingsToWebhook(
       body: JSON.stringify(payload),
     });
 
-    if (res.ok || res.type === 'opaque') {
-      return { ok: true };
+    if (res.ok) {
+      try {
+        const data = await res.json();
+        if (data && data.status === 'error') {
+          return { ok: false, error: data.message || 'Google Sheet Script မှ အမှားတုံ့ပြန်ပါသည်' };
+        }
+        if (data && data.status === 'success') {
+          return { ok: true, count: typeof data.count === 'number' ? data.count : readings.length };
+        }
+      } catch {
+        return { ok: true, count: readings.length };
+      }
+      return { ok: true, count: readings.length };
     }
-    return { ok: false, error: `HTTP ${res.status}` };
+
+    return { ok: false, error: `HTTP ${res.status}: ${res.statusText || 'ချိတ်ဆက်မှု မအောင်မြင်ပါ'}` };
   } catch (err: unknown) {
-    try {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload),
-      });
-      return { ok: true };
-    } catch (fallbackErr: unknown) {
-      const message = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-      return { ok: false, error: message };
-    }
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message || 'ကွန်ရက်ချိတ်ဆက်မှု မရပါ' };
   }
 }
 
@@ -197,20 +317,24 @@ export async function testWebhookConnection(webhookUrl: string): Promise<{ ok: b
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
     });
-    if (res.ok || res.type === 'opaque') return { ok: true };
-    return { ok: false, error: `HTTP ${res.status}` };
-  } catch (err) {
-    try {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'ping' }),
-      });
+    if (res.ok) {
+      try {
+        const data = await res.json();
+        if (data && (data.status === 'pong' || data.status === 'success')) {
+          return { ok: true };
+        }
+        if (data && data.status === 'error') {
+          return { ok: false, error: data.message || 'Script error' };
+        }
+      } catch {
+        return { ok: true };
+      }
       return { ok: true };
-    } catch (fErr) {
-      return { ok: false, error: fErr instanceof Error ? fErr.message : String(fErr) };
     }
+    return { ok: false, error: `HTTP ${res.status}: ${res.statusText || 'စစ်ဆေး၍ မရပါ'}` };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message || 'ကွန်ရက်ချိတ်ဆက်မှု မရပါ' };
   }
 }
 
