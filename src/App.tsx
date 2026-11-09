@@ -76,8 +76,8 @@ function Shell() {
       <nav className="nav no-print" aria-label="အဓိက">
         {([
           ['home', 'ပင်မ'],
-          ['add', 'ထည့်မည်'],
           ['history', 'မှတ်တမ်း'],
+          ['add', 'ထည့်မည်'],
           ['charts', 'ဂရပ်'],
           ['more', 'ပိုမို'],
         ] as const).map(([id, label]) => (
@@ -122,17 +122,19 @@ function Shell() {
             <button type="button" className="btn btn-danger" onClick={log.resetCorrupt}>ပျက်နေသောဒေတာကို ဖယ်ပြီး အသစ်စမည်</button>
           </section>
         ) : null}
-        {view === 'home' ? <HomeView onAdd={(type) => go('add', { preset: type, editing: null })} /> : null}
-        {view === 'add' ? <AddView preset={preset} editing={editing} onDone={() => go('home')} /> : null}
-        {view === 'history' ? (
-          <HistoryView
-            onEdit={(reading) => go('add', { editing: reading, preset: null })}
-            onDeleted={(reading) => setUndo(reading)}
-          />
-        ) : null}
-        {view === 'charts' ? <ChartsView /> : null}
-        {view === 'more' ? <MoreView onPrint={() => go('print')} /> : null}
-        {view === 'print' ? <PrintView /> : null}
+        <div className="view" key={view}>
+          {view === 'home' ? <HomeView onAdd={(type) => go('add', { preset: type, editing: null })} /> : null}
+          {view === 'add' ? <AddView preset={preset} editing={editing} onDone={() => go('home')} /> : null}
+          {view === 'history' ? (
+            <HistoryView
+              onEdit={(reading) => go('add', { editing: reading, preset: null })}
+              onDeleted={(reading) => setUndo(reading)}
+            />
+          ) : null}
+          {view === 'charts' ? <ChartsView /> : null}
+          {view === 'more' ? <MoreView onPrint={() => go('print')} /> : null}
+          {view === 'print' ? <PrintView /> : null}
+        </div>
       </main>
       {undo ? (
         <div className="toast no-print" role="status">

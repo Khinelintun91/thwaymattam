@@ -1,12 +1,12 @@
 type NavId = 'home' | 'add' | 'history' | 'charts' | 'more';
 
-function Icon({ children }: { children: React.ReactNode }) {
+function Icon({ children, strokeWidth = 1.8 }: { children: React.ReactNode; strokeWidth?: number }) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -28,9 +28,9 @@ export function NavIcon({ id }: { id: NavId }) {
       );
     case 'add':
       return (
-        <Icon>
-          <path d="M12 5v14" />
-          <path d="M5 12h14" />
+        <Icon strokeWidth={2.5}>
+          <path d="M12 6v12" />
+          <path d="M6 12h12" />
         </Icon>
       );
     case 'history':

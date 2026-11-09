@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useSlidingPill } from '../components/useSlidingPill.ts';
 import { bpSeries, cappedDomain, CHART_GAP_MS, glucoseSeries, polylines, yDomain, type ChartPoint } from '../domain/chart.ts';
 import { filterReadings } from '../domain/history.ts';
 import { MEAL_LABEL } from '../domain/labels.ts';
@@ -27,6 +28,10 @@ export function ChartsView() {
   const { readings } = useLog();
   const [days, setDays] = useState<1 | 7 | 30 | 'all'>(30);
   const [unit, setUnit] = useState<GlucoseUnit>('mg/dL');
+  const rangeRef = useRef<HTMLDivElement>(null);
+  const unitRef = useRef<HTMLDivElement>(null);
+  useSlidingPill(rangeRef, days);
+  useSlidingPill(unitRef, unit);
   const ranged = useMemo(() => inRange(readings, days), [readings, days]);
   const mg = glucoseSeries(ranged, 'mg/dL');
   const mmol = glucoseSeries(ranged, 'mmol/L');
@@ -42,14 +47,14 @@ export function ChartsView() {
     <div className="stack">
       <h2>ဂရပ်</h2>
       <p className="hint">အရောင်သည် အစာစားချိန်ဖြစ်သည်။ ကောင်း/မကောင်း မဟုတ်ပါ။ mg/dL နှင့် mmol/L ကို ခွဲပြသည်။ အချက်အလက်မရှိသော ကာလကို မျဉ်းမဆက်ပါ။</p>
-      <div className="segmented" role="group" aria-label="ကာလ">
+      <div className="segmented" ref={rangeRef} role="group" aria-label="ကာလ">
         {RANGE_OPTIONS.map((option) => (
           <button key={String(option.value)} type="button" aria-pressed={days === option.value} onClick={() => setDays(option.value)}>
             {option.label}
           </button>
         ))}
       </div>
-      <div className="segmented" role="group" aria-label="ဂလူးကို့စ်ယူနစ်">
+      <div className="segmented" ref={unitRef} role="group" aria-label="ဂလူးကို့စ်ယူနစ်">
         <button type="button" aria-pressed={unit === 'mg/dL'} onClick={() => setUnit('mg/dL')}>mg/dL</button>
         <button type="button" aria-pressed={unit === 'mmol/L'} onClick={() => setUnit('mmol/L')}>mmol/L</button>
       </div>
@@ -229,9 +234,9 @@ function Trend({
           }),
         )}
       </svg>
-      <div className="row">
+      <div className="row legend">
         {series.filter((item) => item.points.length > 0).map((item) => (
-          <span key={item.id} className="badge" style={{ color: item.color }}>{item.label}</span>
+          <span key={item.id} className="badge" style={{ '--series': item.color } as CSSProperties}>{item.label}</span>
         ))}
       </div>
     </div>

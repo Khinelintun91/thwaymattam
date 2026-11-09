@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Reading } from '../domain/types.ts';
 import { blankDraft, clearDraft, draftFromReading, loadDraft, saveDraft, type Draft } from '../components/draft.ts';
 import { ReadingForm } from '../components/ReadingForm.tsx';
+import { useSlidingPill } from '../components/useSlidingPill.ts';
 import { useLog } from '../store/LogProvider.tsx';
 
 export function AddView({
@@ -19,6 +20,8 @@ export function AddView({
     if (preset) return blankDraft(preset);
     return loadDraft() ?? blankDraft('glucose');
   });
+  const typeRef = useRef<HTMLDivElement>(null);
+  useSlidingPill(typeRef, draft.type);
 
   useEffect(() => {
     if (!editing) saveDraft(draft);
@@ -38,7 +41,7 @@ export function AddView({
     <div className="stack">
       <h2>{editing ? 'ပြင်ဆင်မည်' : 'မှတ်တမ်းထည့်မည်'}</h2>
       {editing ? null : (
-        <div className="choice-grid" role="radiogroup" aria-label="မှတ်တမ်းအမျိုးအစား">
+        <div className="choice-grid" ref={typeRef} role="radiogroup" aria-label="မှတ်တမ်းအမျိုးအစား">
           <button type="button" className="choice" role="radio" aria-checked={draft.type === 'glucose'} onClick={() => switchType('glucose')}>
             သွေးဂလူးကို့စ်
           </button>
