@@ -369,7 +369,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
             <DownloadIcon />
             JSON ဘက်အပ် ဒေါင်းလုဒ်
           </button>
-          <label className="upload-tile-compact">
+          <label className="btn btn-quiet upload-tile-btn">
             <UploadIcon />
             <span>ဘက်အပ် ပြန်သွင်းမည်</span>
             <input
@@ -472,7 +472,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
           </ul>
         )}
 
-        <div className="btn-grid-2">
+        <div className="grid-2-fields">
           <label className="field" style={{ margin: 0 }}>
             ဆေးအမည်
             <input value={medName} onChange={(event) => setMedName(event.target.value)} autoComplete="off" placeholder="Metformin" />
