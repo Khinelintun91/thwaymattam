@@ -257,6 +257,40 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 }
 .toast .btn { background: white; color: var(--ink); }
 .day-head { margin: 18px 0 8px; font-size: 1.05rem; }
+.day-card { padding: 12px; }
+.day-head-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: left;
+  min-width: 0;
+  cursor: pointer;
+}
+.day-head-btn > span { min-width: 0; overflow-wrap: anywhere; }
+.part-head { font-size: 0.95rem; margin: 12px 0 6px; color: var(--teal-deep); }
+.reading-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.reading-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  min-width: 0;
+}
+.reading-row-main { min-width: 0; overflow-wrap: anywhere; }
+.reading-row-time { font-variant-numeric: tabular-nums; margin-right: 8px; }
+.reading-row-note { margin: 2px 0 0; }
+.row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-tiny { min-height: 36px; padding: 4px 10px; font-size: 0.85rem; border-radius: 10px; }
+.danger-zone { border-color: #efc2c8; }
 details { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
 summary { min-height: 44px; cursor: pointer; font-weight: 700; }
 

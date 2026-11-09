@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { badgeText, dayHeading, noticesFor, readingContext, readingValue, whenLabel } from '../components/format.ts';
+import { badgeText, dayHeading, displayNotes, noticesFor, readingContext, readingValue } from '../components/format.ts';
+import { formatWallTime } from '../domain/time.ts';
 import { badgeFor } from '../domain/safety.ts';
 import { Modal } from '../components/Modal.tsx';
-import { EMPTY_FILTER, filterReadings, groupByDay, type HistoryFilter } from '../domain/history.ts';
-import { MEAL_LABEL } from '../domain/labels.ts';
+import { EMPTY_FILTER, filterReadings, groupByDay, groupByDayPart, type HistoryFilter } from '../domain/history.ts';
+import { DAYPART_LABEL, MEAL_LABEL } from '../domain/labels.ts';
 import { MEAL_CONTEXTS, type Reading } from '../domain/types.ts';
 import { useLog } from '../store/LogProvider.tsx';
 
@@ -11,8 +12,18 @@ export function HistoryView({ onEdit, onDeleted }: { onEdit: (reading: Reading) 
   const { readings, deleteReading } = useLog();
   const [filter, setFilter] = useState<HistoryFilter>(EMPTY_FILTER);
   const [pending, setPending] = useState<Reading | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const filtered = useMemo(() => filterReadings(readings, filter), [readings, filter]);
   const groups = useMemo(() => groupByDay(filtered), [filtered]);
+
+  function toggleDay(date: string) {
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }
 
   return (
     <div className="stack">
@@ -52,29 +63,43 @@ export function HistoryView({ onEdit, onDeleted }: { onEdit: (reading: Reading) 
         </div>
       </details>
       {groups.length === 0 ? <p className="card">ဤစစ်ထုတ်မှုနှင့် ကိုက်သော မှတ်တမ်းမရှိပါ။</p> : null}
-      {groups.map((group) => (
-        <section key={group.date}>
-          <h3 className="day-head">{dayHeading(group.date)}</h3>
-          <div className="stack">
-            {group.items.map((reading) => (
-              <article key={reading.id} className="card">
-                <div className="spread">
-                  <div>
-                    <strong>{readingValue(reading)}</strong>
-                    <p className="muted">{whenLabel(reading)} · {readingContext(reading)}</p>
-                    {badgeText(reading, readings) ? <span className={`badge ${badgeFor(noticesFor(reading, readings))}`}>{badgeText(reading, readings)}</span> : null}
-                  </div>
-                </div>
-                {reading.notes ? <p>{reading.notes}</p> : null}
-                <div className="row">
-                  <button type="button" className="btn btn-quiet btn-small" onClick={() => onEdit(reading)}>ပြင်မည်</button>
-                  <button type="button" className="btn btn-danger btn-small" onClick={() => setPending(reading)}>ဖျက်မည်</button>
-                </div>
-              </article>
+      {groups.map((group) => {
+        const parts = groupByDayPart(group.items);
+        const isCollapsed = collapsed.has(group.date);
+        return (
+          <article key={group.date} className="card day-card">
+            <button type="button" className="day-head-btn" aria-expanded={!isCollapsed} onClick={() => toggleDay(group.date)}>
+              <span>{dayHeading(group.date)}</span>
+              <span className="muted">{group.items.length} ခု {isCollapsed ? '▸' : '▾'}</span>
+            </button>
+            {isCollapsed ? null : parts.map((part) => (
+              <section key={part.part}>
+                <h4 className="part-head">{DAYPART_LABEL[part.part]}</h4>
+                <ul className="reading-rows">
+                  {part.items.map((reading) => {
+                    const notes = displayNotes(reading);
+                    return (
+                      <li key={reading.id} className="reading-row">
+                        <div className="reading-row-main">
+                          <span className="reading-row-time">{formatWallTime(new Date(reading.recordedAt))}</span>
+                          <strong>{readingValue(reading)}</strong>
+                          <span className="muted"> · {readingContext(reading)}</span>
+                          {badgeText(reading, readings) ? <span className={`badge ${badgeFor(noticesFor(reading, readings))}`}>{badgeText(reading, readings)}</span> : null}
+                          {notes ? <p className="muted reading-row-note">{notes}</p> : null}
+                        </div>
+                        <div className="row-actions">
+                          <button type="button" className="btn btn-quiet btn-tiny" onClick={() => onEdit(reading)}>ပြင်မည်</button>
+                          <button type="button" className="btn btn-danger btn-tiny" onClick={() => setPending(reading)}>ဖျက်မည်</button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             ))}
-          </div>
-        </section>
-      ))}
+          </article>
+        );
+      })}
       {pending ? (
         <Modal title="မှတ်တမ်းဖျက်မည်" onClose={() => setPending(null)}>
           <p>{readingValue(pending)} ကို ဖျက်မည်။ ဖျက်ပြီးနောက် ခဏတာ ပြန်ယူနိုင်သည်။</p>

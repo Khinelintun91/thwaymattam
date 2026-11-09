@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Modal } from '../components/Modal.tsx';
 import { importPreviewSummary, importResultSummary, planImport, readImport, type ImportReadResult } from '../domain/backup.ts';
 import { backupPayload } from '../domain/share.ts';
 import { toCsv } from '../domain/csv.ts';
@@ -25,6 +26,8 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
   const [medName, setMedName] = useState('');
   const [medDose, setMedDose] = useState('');
   const [medMessage, setMedMessage] = useState<string | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
+  const [clearMessage, setClearMessage] = useState<string | null>(null);
 
   function download(filename: string, content: string, mime: string) {
     const blob = new Blob([content], { type: mime });
@@ -193,6 +196,47 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
         <button type="button" className="btn btn-primary" disabled={medName.trim() === ''} onClick={addMedication}>ထည့်မည်</button>
         {medMessage ? <p role="status">{medMessage}</p> : null}
       </section>
+      {log.demo ? (
+        <section className="card stack">
+          <h3>data အကုန် ရှင်း</h3>
+          <p>နမူနာခန်းမှာ ရှိနေသည်။ ပင်မမှတ်တမ်း data ရှင်းရန် ပင်မမှတ်တမ်းသို့ ပြန်ပါ။</p>
+        </section>
+      ) : (
+        <section className="card stack danger-zone">
+          <h3>data အကုန် ရှင်း</h3>
+          <p>ပင်မမှတ်တမ်း {log.readings.length} ခု နှင့် ဆေးဝါးစာရင်း {log.medications.length} မျိုး ကို အကုန် ဖျက်မည်။ ဖျက်ပြီးရင် ပြန်မရပါ။ မဖျက်ခင် JSON ဘက်အပ် ထုတ်ထားပါ။</p>
+          <button
+            type="button"
+            className="btn btn-danger"
+            disabled={log.readings.length === 0 && log.medications.length === 0}
+            onClick={() => setClearOpen(true)}
+          >
+            data အကုန် ရှင်းမည်
+          </button>
+          {clearMessage ? <p role="status">{clearMessage}</p> : null}
+        </section>
+      )}
+      {clearOpen ? (
+        <Modal title="data အကုန် ရှင်းမည်" onClose={() => setClearOpen(false)}>
+          <p>ပင်မမှတ်တမ်း {log.readings.length} ခု နှင့် ဆေးဝါးစာရင်း {log.medications.length} မျိုး ကို အကုန် ဖျက်မည်။ ဖျက်ပြီးရင် ပြန်မရပါ။</p>
+          <p>JSON ဘက်အပ် ထုတ်ထားပြီးပြီလား။</p>
+          <div className="row">
+            <button type="button" className="btn btn-quiet" onClick={() => setClearOpen(false)}>မဖျက်ပါ</button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => {
+                if (log.clearMainData()) {
+                  setClearMessage('ရှင်းပြီးပါပြီ။');
+                  setClearOpen(false);
+                }
+              }}
+            >
+              အားလုံး ဖျက်မည်
+            </button>
+          </div>
+        </Modal>
+      ) : null}
       <section className="card stack">
         <h3>နမူနာ</h3>
         <p>နမူနာသည် သီးခြားသိမ်းဆည်းမှုဖြစ်ပြီး တကယ်လူနာမှတ်တမ်းမဟုတ်ပါ။ ပင်မမှတ်တမ်းကို မဖျက်ပါ။</p>

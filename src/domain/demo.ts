@@ -2,6 +2,9 @@ import type { Medication, Reading, StoreData } from './types.ts';
 import { dateKey, shiftDateKey, wallClockToIso } from './time.ts';
 import { emptyStore } from './validate.ts';
 
+/** The note stamped on every demo row. History hides it (the demo chip already says it). */
+export const SAMPLE_NOTE = 'နမူနာသီးသန့်။ တကယ်လူနာမှတ်တမ်း မဟုတ်ပါ။';
+
 /**
  * True when a stored demo set predates the 3-month generated rows: the old
  * set has only the 9 anchor rows and no generated `demo-*-d<offset>-*` ids.
@@ -121,7 +124,7 @@ export function buildDemoReadings(now = new Date()): Reading[] {
   const three = shiftDateKey(today, -3);
   if (!yesterday || !two || !three) return [];
   const stamp = now.toISOString();
-  const note = 'နမူနာသီးသန့်။ တကယ်လူနာမှတ်တမ်း မဟုတ်ပါ။';
+  const note = SAMPLE_NOTE;
   const base = { symptoms: [] as Reading['symptoms'], source: 'manual' as const, createdAt: stamp, updatedAt: stamp, notes: note };
   // Anchor rows for today and the last 3 days (kept stable for tests and
   // for the first-run demo), then generated rows back to 90 days total.

@@ -1,5 +1,5 @@
-import type { GlucoseUnit, MealContext, Reading } from './types.ts';
-import { dateKey } from './time.ts';
+import type { DayPart, GlucoseUnit, MealContext, Reading } from './types.ts';
+import { dateKey, dayPart } from './time.ts';
 
 export interface HistoryFilter {
   type: 'all' | 'glucose' | 'bp';
@@ -48,6 +48,29 @@ export function groupByDay(readings: Reading[]): DayGroup[] {
     else last.items.push(reading);
   }
   return groups;
+}
+
+export interface DayPartGroup {
+  part: DayPart;
+  items: Reading[];
+}
+
+const DAY_PART_ORDER: DayPart[] = ['morning', 'afternoon', 'evening', 'night'];
+
+/**
+ * A day's readings grouped by time of day, morning first, only non-empty
+ * parts. Within a part the earliest reading comes first, so a day reads
+ * top to bottom the way it happened.
+ */
+export function groupByDayPart(items: Reading[]): DayPartGroup[] {
+  const byPart = new Map<DayPart, Reading[]>();
+  for (const reading of [...items].sort((a, b) => Date.parse(a.recordedAt) - Date.parse(b.recordedAt))) {
+    const part = dayPart(new Date(reading.recordedAt));
+    const list = byPart.get(part) ?? [];
+    list.push(reading);
+    byPart.set(part, list);
+  }
+  return DAY_PART_ORDER.filter((part) => byPart.has(part)).map((part) => ({ part, items: byPart.get(part) ?? [] }));
 }
 
 export function latestReading(readings: Reading[], type: Reading['type']): Reading | null {

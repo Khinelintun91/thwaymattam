@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bpSeries, cappedDomain, glucoseSeries, polylines, yDomain, CHART_GAP_MS } from './chart.ts';
 import { buildDemoReadings } from './demo.ts';
-import { filterReadings, groupByDay, latestReading } from './history.ts';
+import { filterReadings, groupByDay, groupByDayPart, latestReading } from './history.ts';
 import { dateKey } from './time.ts';
 import type { Reading } from './types.ts';
 
@@ -54,6 +54,34 @@ describe('history and charts', () => {
     expect(single.max - single.min).toBeGreaterThan(20);
     expect(single.min).toBeGreaterThan(70);
     expect(single.max).toBeLessThan(300);
+  });
+
+  it('groups one day by time of day, morning first and earliest first within a part', () => {
+    const stamp = NOW.toISOString();
+    const row = (id: string, recordedAt: string): Reading => ({
+      id,
+      type: 'glucose',
+      recordedAt,
+      glucoseValue: 110,
+      glucoseUnit: 'mg/dL',
+      mealContext: 'random',
+      minutesSinceMealStart: null,
+      symptoms: [],
+      notes: '',
+      source: 'manual',
+      createdAt: stamp,
+      updatedAt: stamp,
+    });
+    const parts = groupByDayPart([
+      row('night-1', '2026-11-08T22:00:00+06:30'),
+      row('evening-1', '2026-11-08T18:05:00+06:30'),
+      row('morning-2', '2026-11-08T07:20:00+06:30'),
+      row('afternoon-1', '2026-11-08T13:40:00+06:30'),
+      row('morning-1', '2026-11-08T07:10:00+06:30'),
+    ]);
+    expect(parts.map((part) => part.part)).toEqual(['morning', 'afternoon', 'evening', 'night']);
+    expect(parts[0]?.items.map((item) => item.id)).toEqual(['morning-1', 'morning-2']);
+    expect(parts[3]?.items.map((item) => item.id)).toEqual(['night-1']);
   });
 
   it('caps the display domain so one spike does not flatten the chart', () => {

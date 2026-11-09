@@ -1,3 +1,4 @@
+import { SAMPLE_NOTE } from '../domain/demo.ts';
 import { DAYPART_LABEL, MEAL_LABEL, MONTHS_MY } from '../domain/labels.ts';
 import { evaluateReading, badgeFor, badgeLabel, type SafetyNotice } from '../domain/safety.ts';
 import { dayPart, formatLongDate, formatWallTime, relativeDayLabel } from '../domain/time.ts';
@@ -31,6 +32,15 @@ export function noticesFor(reading: Reading, all: Reading[]): SafetyNotice[] {
 
 export function badgeText(reading: Reading, all: Reading[]): string | null {
   return badgeLabel(badgeFor(noticesFor(reading, all)));
+}
+
+/**
+ * Notes for display in history rows. The demo sample note repeats on every
+ * demo row, so it is stripped (the demo chip at the top already says it);
+ * any other note text is kept.
+ */
+export function displayNotes(reading: Reading): string {
+  return reading.notes.replace(SAMPLE_NOTE, '').replace(/\s+/g, ' ').trim();
 }
 
 export function dayHeading(date: string, now = new Date()): string {

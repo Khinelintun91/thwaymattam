@@ -23,6 +23,8 @@ interface LogContextValue {
   restoreReading: (reading: Reading) => boolean;
   addMedication: (input: { name: string; dose: string; notes: string }) => boolean;
   removeMedication: (id: string) => boolean;
+  /** Wipes the main log (readings + medications). Demo room only via MoreView in the main room. */
+  clearMainData: () => boolean;
   importReadings: (
     incoming: { accepted: Reading[]; updates: Reading[]; medications?: Medication[] },
     mode: 'merge' | 'replace',
@@ -240,6 +242,7 @@ export function LogProvider({ children }: { children: ReactNode }) {
       },
       removeMedication: (id) =>
         commit((current) => ({ ...current, medications: current.medications.filter((item) => item.id !== id) })),
+      clearMainData: () => commit(() => emptyStore()),
       importReadings: (incoming, mode) =>
         commit((current) => ({
           ...current,
