@@ -545,6 +545,8 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 
 /* History */
 .history-view { max-width: 760px; margin-inline: auto; }
+/* No frame around the filter: the white pill summary and the filter card stand alone. */
+.filter-panel { background: none; border: 0; padding: 0; }
 .filter-panel summary { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; background: var(--paper); border-radius: 999px; box-shadow: var(--shadow); font-size: 15px; font-weight: 600; cursor: pointer; list-style: none; }
 .filter-panel summary::-webkit-details-marker { display: none; }
 .filter-panel summary svg { width: 20px; height: 20px; flex-shrink: 0; }
@@ -582,14 +584,14 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 .day-head-btn:active { background: var(--accent-softer); }
 .day-head-title { min-width: 0; overflow-wrap: anywhere; }
 .day-head-meta { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.count-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; }
+.count-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-deep); font-size: 12px; font-weight: 700; }
 .day-head-chevron { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #F1F5F9; color: var(--muted); font-size: 13px; }
 .part-head { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--muted); margin: 12px 0 6px; }
 .part-head::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .reading-rows { list-style: none; margin: 0; padding: 0; display: grid; }
 .reading-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 4px 12px;
   align-items: start;
   border-top: 1px solid var(--line);
@@ -599,14 +601,20 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 .reading-row:first-child { border-top: none; padding-top: 4px; }
 .reading-row-time-col { display: grid; gap: 4px; min-width: 0; align-content: start; }
 .reading-row-time { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.reading-row-time, .context-pill { white-space: nowrap; }
 .reading-row-value-col { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
-.reading-row-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.reading-row-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: normal; overflow-wrap: normal; text-align: right; }
 .reading-row-note { grid-column: 1 / -1; margin: 0; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .row-actions { grid-column: 1 / -1; display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-shrink: 0; }
 .row-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
 .row-actions .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-@media (min-width: 400px) {
-  .reading-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+/* 36px look, 44px tap target via a vertical ::after extension. The 1px
+   button border shrinks the padding box the ::after is measured from, so
+   inset -5px (not -4px) is what makes the hit area a true 44px. */
+.row-actions .btn-tiny { position: relative; }
+.row-actions .btn-tiny::after { content: ''; position: absolute; inset: -5px 0; }
+@media (min-width: 640px) {
+  .reading-row { grid-template-columns: auto minmax(0, 1fr) auto; }
   .row-actions { grid-column: 3; grid-row: 1; }
 }
 .danger-zone { border: 1.5px solid #F7C6D0; background: #FFFBFC; }
@@ -675,7 +683,7 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 .field-icon-wrap { position: relative; display: block; min-width: 0; }
 .field-icon-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--muted); pointer-events: none; }
 .field-icon-wrap input { padding-left: 44px; }
-.time-readout { display: block; font-size: 13px; color: var(--muted); }
+.time-readout { display: block; font-size: 13px; color: #475569; }
 /* Day-part pill + note */
 .daypart-line { display: grid; gap: 4px; justify-items: start; }
 .daypart-pill { display: inline-flex; background: var(--accent-soft); color: var(--accent-deep); font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
