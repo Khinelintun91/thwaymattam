@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal } from './components/Modal.tsx';
+import { InfoIcon, Modal } from './components/Modal.tsx';
 import { NavIcon } from './components/NavIcons.tsx';
 import { ACK_KEY, type Reading } from './domain/types.ts';
 import { LogProvider, useLog } from './store/LogProvider.tsx';
@@ -151,7 +151,7 @@ function Shell() {
         </div>
       ) : null}
       {log.hydrated && !ack ? (
-        <Modal title="ဤအက်ပ်က ဘာလုပ်သလဲ">
+        <Modal title="ဤအက်ပ်က ဘာလုပ်သလဲ" titleIcon={<InfoIcon />}>
           <div className="stack">
             <p>ဖုန်းထဲမှာပဲ မှတ်တမ်းတင်သည်။</p>
             <p>ရောဂါမရှာပါ။ ဆေးပမာဏမပြောင်းပါ။ နံပါတ်တစ်ခုတည်းဖြင့် ပုံမှန်ဟု မဆုံးဖြတ်ပါ။</p>

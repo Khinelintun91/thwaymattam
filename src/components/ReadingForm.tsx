@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { DAYPART_LABEL, DAYPART_RANGE, MEAL_LABEL, SYMPTOM_LABEL } from '../domain/labels.ts';
 import { normalizeNumericInput, parseLooseNumber } from '../domain/numbers.ts';
-import { evaluateReading } from '../domain/safety.ts';
+import { badgeFor, evaluateReading } from '../domain/safety.ts';
 import { dayPart, wallClockToIso } from '../domain/time.ts';
 import { EMERGENCY_SYMPTOMS, MEAL_CONTEXTS, SYMPTOMS, type GlucoseUnit, type MealContext, type Reading, type Symptom } from '../domain/types.ts';
 import { convertGlucose, formatGlucose, roundGlucose } from '../domain/units.ts';
 import { createId, issueMessage, validateReading, type ValidateIssue } from '../domain/validate.ts';
+import { badgeText, noticesFor, readingContext, readingValue } from './format.ts';
 import type { Draft } from './draft.ts';
 import { SafetyList } from './SafetyList.tsx';
 
@@ -34,7 +35,7 @@ export function ReadingForm({
     const candidate = toCandidate(draft, editing);
     const validated = validateReading(candidate);
     if (!validated.ok) return null;
-    return evaluateReading(validated.value, others);
+    return { reading: validated.value, notices: evaluateReading(validated.value, others) };
   }, [draft, editing, others]);
 
   function update(partial: Partial<Draft>) {
@@ -82,121 +83,148 @@ export function ReadingForm({
   }
 
   const remainingSymptoms = SYMPTOMS.filter((symptom) => !draft.symptoms.includes(symptom));
+  const previewText = preview ? readingValue(preview.reading) : '';
+  const previewUnitIndex = previewText.lastIndexOf(' ');
+  const previewValue = previewUnitIndex > 0 ? previewText.slice(0, previewUnitIndex) : previewText;
+  const previewUnit = previewUnitIndex > 0 ? previewText.slice(previewUnitIndex + 1) : null;
 
   return (
-    <div className="stack">
-      <div className="grid-2">
-        <label className="field">
-          ရက်စွဲ (မြန်မာစံတော်ချိန်)
-          <input type="date" value={draft.date} onChange={(event) => update({ date: event.target.value })} required />
-        </label>
-        <label className="field">
-          အချိန် (UTC+6:30)
-          <input type="time" value={draft.time} onChange={(event) => update({ time: event.target.value })} required />
-        </label>
-      </div>
-      <p>{part ? `${DAYPART_LABEL[part]} (${DAYPART_RANGE[part]})` : 'နေ့ရက်နှင့် အချိန်ကို စစ်ပါ။'} အချိန်အမည်သည် အစာရှောင်ခြင်းကို မဆိုလိုပါ။</p>
+    <div className="stack add-layout">
+      <div className="stack add-fields">
+        <div className="grid-2">
+          <label className="field">
+            ရက်စွဲ (မြန်မာစံတော်ချိန်)
+            <input type="date" value={draft.date} onChange={(event) => update({ date: event.target.value })} required />
+          </label>
+          <label className="field">
+            အချိန် (UTC+6:30)
+            <input type="time" value={draft.time} onChange={(event) => update({ time: event.target.value })} required />
+          </label>
+        </div>
+        <p>{part ? `${DAYPART_LABEL[part]} (${DAYPART_RANGE[part]})` : 'နေ့ရက်နှင့် အချိန်ကို စစ်ပါ။'} အချိန်အမည်သည် အစာရှောင်ခြင်းကို မဆိုလိုပါ။</p>
 
-      {draft.type === 'glucose' ? (
-        <div className="stack">
+        {draft.type === 'glucose' ? (
+          <div className="stack">
+            <label className="field">
+              သွေးဂလူးကို့စ်
+              <input
+                inputMode="decimal"
+                value={draft.glucoseValue}
+                aria-invalid={hasError(errors, 'glucoseValue')}
+                onChange={(event) => setNumber('glucoseValue', event.target.value)}
+              />
+            </label>
+            <label className="field">
+              ဂလူးကို့စ်ယူနစ်
+              <select value={draft.glucoseUnit} onChange={(event) => chooseUnit(event.target.value as GlucoseUnit | '')} required>
+                <option value="">ယူနစ်ရွေးပါ</option>
+                <option value="mg/dL">mg/dL</option>
+                <option value="mmol/L">mmol/L</option>
+              </select>
+            </label>
+            {draft.glucoseUnit && parseLooseNumber(draft.glucoseValue) != null ? (
+              <p className="hint">
+                ပြောင်းလဲပြထားသော တန်ဖိုး (သိမ်းမည့်ယူနစ်မဟုတ်ပါ) ·{' '}
+                {formatGlucose(convertGlucose(parseLooseNumber(draft.glucoseValue) ?? 0, draft.glucoseUnit, draft.glucoseUnit === 'mg/dL' ? 'mmol/L' : 'mg/dL'), draft.glucoseUnit === 'mg/dL' ? 'mmol/L' : 'mg/dL')}{' '}
+                {draft.glucoseUnit === 'mg/dL' ? 'mmol/L' : 'mg/dL'}
+              </p>
+            ) : null}
+            <label className="field">
+              အစာစားချိန်
+              <select value={draft.mealContext} onChange={(event) => chooseMealContext(event.target.value as MealContext)}>
+                {MEAL_CONTEXTS.map((context) => (
+                  <option key={context} value={context}>
+                    {MEAL_LABEL[context]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {draft.mealContext === 'postmeal' ? (
+              <label className="field">
+                <span className="field-head">
+                  <span>အစာစတင်စားချိန်မှ မိနစ်</span>
+                  <span className="field-hint">မသိလျှင် ချန်လှပ်နိုင်သည်။ နာရီမှ မခန့်မှန်းပါ။</span>
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={draft.minutesSinceMealStart}
+                  onChange={(event) => setNumber('minutesSinceMealStart', event.target.value)}
+                />
+              </label>
+            ) : null}
+          </div>
+        ) : (
+          <div className="grid-2">
+            <NumberField label="အပေါ်သွေးပေါင် SYS" field="systolic" draft={draft} setNumber={setNumber} />
+            <NumberField label="အောက်သွေးပေါင် DIA" field="diastolic" draft={draft} setNumber={setNumber} />
+            <NumberField label="သွေးခုန်နှုန်း PUL (မထည့်လည်းရ)" field="pulse" draft={draft} setNumber={setNumber} />
+          </div>
+        )}
+
+        <div className="stack symptoms-card">
           <label className="field">
-            သွေးဂလူးကို့စ်
-            <input
-              inputMode="decimal"
-              value={draft.glucoseValue}
-              aria-invalid={hasError(errors, 'glucoseValue')}
-              onChange={(event) => setNumber('glucoseValue', event.target.value)}
-            />
-          </label>
-          <label className="field">
-            ဂလူးကို့စ်ယူနစ်
-            <select value={draft.glucoseUnit} onChange={(event) => chooseUnit(event.target.value as GlucoseUnit | '')} required>
-              <option value="">ယူနစ်ရွေးပါ</option>
-              <option value="mg/dL">mg/dL</option>
-              <option value="mmol/L">mmol/L</option>
-            </select>
-          </label>
-          {draft.glucoseUnit && parseLooseNumber(draft.glucoseValue) != null ? (
-            <p className="hint">
-              ပြောင်းလဲပြထားသော တန်ဖိုး (သိမ်းမည့်ယူနစ်မဟုတ်ပါ) ·{' '}
-              {formatGlucose(convertGlucose(parseLooseNumber(draft.glucoseValue) ?? 0, draft.glucoseUnit, draft.glucoseUnit === 'mg/dL' ? 'mmol/L' : 'mg/dL'), draft.glucoseUnit === 'mg/dL' ? 'mmol/L' : 'mg/dL')}{' '}
-              {draft.glucoseUnit === 'mg/dL' ? 'mmol/L' : 'mg/dL'}
-            </p>
-          ) : null}
-          <label className="field">
-            အစာစားချိန်
-            <select value={draft.mealContext} onChange={(event) => chooseMealContext(event.target.value as MealContext)}>
-              {MEAL_CONTEXTS.map((context) => (
-                <option key={context} value={context}>
-                  {MEAL_LABEL[context]}
+            လက္ခဏာ
+            <select value="" onChange={(event) => addSymptom(event.target.value)} disabled={remainingSymptoms.length === 0}>
+              <option value="">{remainingSymptoms.length === 0 ? 'အားလုံး ရွေးပြီးပါပြီ' : 'လက္ခဏာ ရွေးမည်'}</option>
+              {remainingSymptoms.map((symptom) => (
+                <option key={symptom} value={symptom}>
+                  {(EMERGENCY_SYMPTOMS as readonly string[]).includes(symptom) ? 'အရေးပေါ် · ' : ''}
+                  {SYMPTOM_LABEL[symptom]}
                 </option>
               ))}
             </select>
           </label>
-          {draft.mealContext === 'postmeal' ? (
-            <label className="field">
-              အစာစတင်စားချိန်မှ မိနစ်
-              <input
-                inputMode="numeric"
-                value={draft.minutesSinceMealStart}
-                onChange={(event) => setNumber('minutesSinceMealStart', event.target.value)}
-              />
-              <span className="hint">မသိလျှင် ချန်လှပ်နိုင်သည်။ နာရီမှ မခန့်မှန်းပါ။</span>
-            </label>
-          ) : null}
+          {draft.symptoms.length > 0 ? (
+            <div className="chips" aria-label="ရွေးထားသော လက္ခဏာများ">
+              {draft.symptoms.map((symptom) => (
+                <span key={symptom} className="chip">
+                  {(EMERGENCY_SYMPTOMS as readonly string[]).includes(symptom) ? 'အရေးပေါ် · ' : ''}
+                  {SYMPTOM_LABEL[symptom]}
+                  <button type="button" aria-label={`${SYMPTOM_LABEL[symptom]} ကို ဖယ်မည်`} onClick={() => removeSymptom(symptom)}>
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="hint">လက္ခဏာ မရွေးရသေးပါ။ တစ်ခုထက်ပို ရွေးနိုင်သည်။</p>
+          )}
         </div>
-      ) : (
-        <div className="grid-2">
-          <NumberField label="အပေါ်သွေးပေါင် SYS" field="systolic" draft={draft} setNumber={setNumber} />
-          <NumberField label="အောက်သွေးပေါင် DIA" field="diastolic" draft={draft} setNumber={setNumber} />
-          <NumberField label="သွေးခုန်နှုန်း PUL (မထည့်လည်းရ)" field="pulse" draft={draft} setNumber={setNumber} />
-        </div>
-      )}
-
-      <div className="stack">
         <label className="field">
-          လက္ခဏာ
-          <select value="" onChange={(event) => addSymptom(event.target.value)} disabled={remainingSymptoms.length === 0}>
-            <option value="">{remainingSymptoms.length === 0 ? 'အားလုံး ရွေးပြီးပါပြီ' : 'လက္ခဏာ ရွေးမည်'}</option>
-            {remainingSymptoms.map((symptom) => (
-              <option key={symptom} value={symptom}>
-                {(EMERGENCY_SYMPTOMS as readonly string[]).includes(symptom) ? 'အရေးပေါ် · ' : ''}
-                {SYMPTOM_LABEL[symptom]}
-              </option>
-            ))}
-          </select>
+          မှတ်ချက်
+          <textarea value={draft.notes} maxLength={2000} onChange={(event) => update({ notes: event.target.value })} />
         </label>
-        {draft.symptoms.length > 0 ? (
-          <div className="chips" aria-label="ရွေးထားသော လက္ခဏာများ">
-            {draft.symptoms.map((symptom) => (
-              <span key={symptom} className="chip">
-                {(EMERGENCY_SYMPTOMS as readonly string[]).includes(symptom) ? 'အရေးပေါ် · ' : ''}
-                {SYMPTOM_LABEL[symptom]}
-                <button type="button" aria-label={`${SYMPTOM_LABEL[symptom]} ကို ဖယ်မည်`} onClick={() => removeSymptom(symptom)}>
-                  ✕
-                </button>
-              </span>
+        {errors.length > 0 ? (
+          <ul className="error" role="alert">
+            {errors.map((issue, index) => (
+              <li key={`${issue.path}-${index}`}>
+                <WarningIcon />
+                {issueMessage(issue.code)}
+              </li>
             ))}
-          </div>
-        ) : (
-          <p className="hint">လက္ခဏာ မရွေးရသေးပါ။ တစ်ခုထက်ပို ရွေးနိုင်သည်။</p>
-        )}
+          </ul>
+        ) : null}
       </div>
-      <label className="field">
-        မှတ်ချက်
-        <textarea value={draft.notes} maxLength={2000} onChange={(event) => update({ notes: event.target.value })} />
-      </label>
-      {errors.length > 0 ? (
-        <ul className="error" role="alert">
-          {errors.map((issue, index) => (
-            <li key={`${issue.path}-${index}`}>{issueMessage(issue.code)}</li>
-          ))}
-        </ul>
+      {preview ? (
+        <section className="preview-card">
+          <p className="preview-value">{previewValue}</p>
+          {previewUnit ? <p className="preview-unit">{previewUnit}</p> : null}
+          <p className="preview-meta">
+            <span className="context-pill">{readingContext(preview.reading)}</span>
+            {badgeText(preview.reading, others) ? <span className={`badge ${badgeFor(noticesFor(preview.reading, others))}`}>{badgeText(preview.reading, others)}</span> : null}
+          </p>
+          <SafetyList notices={preview.notices} />
+        </section>
       ) : null}
-      <SafetyList notices={preview ?? []} />
       <div className="sticky-actions">
-        <button type="button" className="btn btn-quiet" onClick={onCancel}>မသိမ်းပါ</button>
-        <button type="button" className="btn btn-primary" onClick={save}>{editing ? 'ပြင်ဆင်ချက်သိမ်းမည်' : 'သိမ်းမည်'}</button>
+        <button type="button" className="btn btn-quiet" onClick={onCancel}>
+          <XIcon />
+          မသိမ်းပါ
+        </button>
+        <button type="button" className="btn btn-primary" onClick={save}>
+          <CheckIcon />
+          {editing ? 'ပြင်ဆင်ချက်သိမ်းမည်' : 'သိမ်းမည်'}
+        </button>
       </div>
     </div>
   );
@@ -218,6 +246,49 @@ function NumberField({
       {label}
       <input inputMode="decimal" value={draft[field]} onChange={(event) => setNumber(field, event.target.value)} />
     </label>
+  );
+}
+
+function FormIcon({ children, strokeWidth = 1.8 }: { children: ReactNode; strokeWidth?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <FormIcon strokeWidth={2.5}>
+      <path d="M4 12.5l5 5L20 6.5" />
+    </FormIcon>
+  );
+}
+
+function XIcon() {
+  return (
+    <FormIcon>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </FormIcon>
+  );
+}
+
+function WarningIcon() {
+  return (
+    <FormIcon>
+      <path d="M12 3.5 2.8 19.5h18.4L12 3.5z" />
+      <path d="M12 10v4.5" />
+      <circle cx="12" cy="17.2" r="0.7" fill="currentColor" stroke="none" />
+    </FormIcon>
   );
 }
 

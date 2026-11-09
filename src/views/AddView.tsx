@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Reading } from '../domain/types.ts';
 import { blankDraft, clearDraft, draftFromReading, loadDraft, saveDraft, type Draft } from '../components/draft.ts';
 import { ReadingForm } from '../components/ReadingForm.tsx';
@@ -39,14 +39,21 @@ export function AddView({
 
   return (
     <div className="stack">
-      <h2>{editing ? 'ပြင်ဆင်မည်' : 'မှတ်တမ်းထည့်မည်'}</h2>
+      <h2 className="add-title">
+        <span className="icon-well icon-well-sm" aria-hidden="true">
+          {draft.type === 'glucose' ? <DropletIcon /> : <HeartIcon />}
+        </span>
+        {editing ? 'ပြင်ဆင်မည်' : 'မှတ်တမ်းထည့်မည်'}
+      </h2>
       {editing ? null : (
         <div className="choice-grid" ref={typeRef} role="radiogroup" aria-label="မှတ်တမ်းအမျိုးအစား">
           <button type="button" className="choice" role="radio" aria-checked={draft.type === 'glucose'} onClick={() => switchType('glucose')}>
-            သွေးဂလူးကို့စ်
+            <DropletIcon />
+            <span className="choice-label">သွေးဂလူးကို့စ်</span>
           </button>
           <button type="button" className="choice" role="radio" aria-checked={draft.type === 'bp'} onClick={() => switchType('bp')}>
-            သွေးပေါင်
+            <HeartIcon />
+            <span className="choice-label">သွေးပေါင်</span>
           </button>
         </div>
       )}
@@ -66,5 +73,38 @@ export function AddView({
         }}
       />
     </div>
+  );
+}
+
+function AddIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function DropletIcon() {
+  return (
+    <AddIcon>
+      <path d="M12 3c3.2 4.2 5.5 7.4 5.5 10.2a5.5 5.5 0 1 1-11 0C6.5 10.4 8.8 7.2 12 3z" />
+    </AddIcon>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <AddIcon>
+      <path d="M12 20.5C7 16.5 3.5 13.3 3.5 9.6 3.5 7 5.5 5 8 5c1.6 0 3.1.9 4 2.3C12.9 5.9 14.4 5 16 5c2.5 0 4.5 2 4.5 4.6 0 3.7-3.5 6.9-8.5 10.9z" />
+    </AddIcon>
   );
 }

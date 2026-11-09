@@ -4,10 +4,12 @@ const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabi
 
 export function Modal({
   title,
+  titleIcon,
   children,
   onClose,
 }: {
   title: string;
+  titleIcon?: ReactNode;
   children: ReactNode;
   onClose?: () => void;
 }) {
@@ -42,9 +44,67 @@ export function Modal({
     <div className="modal-backdrop no-print">
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={ref}>
         <div className="modal-handle" aria-hidden="true" />
-        <h2 id="modal-title">{title}</h2>
+        <div className="modal-title-row">
+          {titleIcon ? (
+            <span className="icon-well icon-well-sm" aria-hidden="true">
+              {titleIcon}
+            </span>
+          ) : null}
+          <h2 id="modal-title">{title}</h2>
+        </div>
         {children}
+        {onClose ? (
+          <button type="button" className="modal-close" aria-label="ပိတ်မည်" onClick={onClose}>
+            <XIcon />
+          </button>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function ModalIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <ModalIcon>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </ModalIcon>
+  );
+}
+
+export function TrashIcon() {
+  return (
+    <ModalIcon>
+      <path d="M4 7h16" />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+      <path d="M6.5 7l1 13a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </ModalIcon>
+  );
+}
+
+export function InfoIcon() {
+  return (
+    <ModalIcon>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none" />
+    </ModalIcon>
   );
 }

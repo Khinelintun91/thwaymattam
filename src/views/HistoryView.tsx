@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { badgeText, dayHeading, displayNotes, noticesFor, readingContext, readingValue } from '../components/format.ts';
 import { formatWallTime } from '../domain/time.ts';
 import { badgeFor } from '../domain/safety.ts';
-import { Modal } from '../components/Modal.tsx';
+import { Modal, TrashIcon } from '../components/Modal.tsx';
 import { EMPTY_FILTER, filterReadings, groupByDay, groupByDayPart, type HistoryFilter } from '../domain/history.ts';
 import { DAYPART_LABEL, MEAL_LABEL } from '../domain/labels.ts';
 import { MEAL_CONTEXTS, type Reading } from '../domain/types.ts';
@@ -101,19 +101,20 @@ export function HistoryView({ onEdit, onDeleted }: { onEdit: (reading: Reading) 
         );
       })}
       {pending ? (
-        <Modal title="မှတ်တမ်းဖျက်မည်" onClose={() => setPending(null)}>
+        <Modal title="မှတ်တမ်းဖျက်မည်" titleIcon={<TrashIcon />} onClose={() => setPending(null)}>
           <p>{readingValue(pending)} ကို ဖျက်မည်။ ဖျက်ပြီးနောက် ခဏတာ ပြန်ယူနိုင်သည်။</p>
           <div className="row">
             <button type="button" className="btn btn-quiet" onClick={() => setPending(null)}>မဖျက်ပါ</button>
             <button
               type="button"
-              className="btn btn-danger"
+              className="btn btn-quiet-danger"
               onClick={() => {
                 const target = pending;
                 if (deleteReading(target.id)) onDeleted(target);
                 setPending(null);
               }}
             >
+              <TrashIcon />
               ဖျက်မည်
             </button>
           </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal } from '../components/Modal.tsx';
+import { Modal, TrashIcon } from '../components/Modal.tsx';
 import { importPreviewSummary, importResultSummary, planImport, readImport, type ImportReadResult } from '../domain/backup.ts';
 import { backupPayload } from '../domain/share.ts';
 import { toCsv } from '../domain/csv.ts';
@@ -217,7 +217,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
         </section>
       )}
       {clearOpen ? (
-        <Modal title="data အကုန် ရှင်းမည်" onClose={() => setClearOpen(false)}>
+        <Modal title="data အကုန် ရှင်းမည်" titleIcon={<TrashIcon />} onClose={() => setClearOpen(false)}>
           <p>ပင်မမှတ်တမ်း {log.readings.length} ခု နှင့် ဆေးဝါးစာရင်း {log.medications.length} မျိုး ကို အကုန် ဖျက်မည်။ ဖျက်ပြီးရင် ပြန်မရပါ။</p>
           <p>JSON ဘက်အပ် ထုတ်ထားပြီးပြီလား။</p>
           <div className="row">
