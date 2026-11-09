@@ -40,3 +40,5 @@ npm run dev
 ```
 
 Open http://127.0.0.1:47231. `npm test` runs the checks. `npm run build` writes `dist/`. The local build uses a relative base. The GitHub Pages workflow sets `VITE_BASE_PATH=/thwaymattam/`.
+
+GitHub Actions publishes `dist/` directly, so this site does not use Jekyll and does not need a `.nojekyll` file.
