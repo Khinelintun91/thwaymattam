@@ -215,7 +215,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
             <span className="icon-well icon-well-lg icon-well-danger" aria-hidden="true"><TrashIcon /></span>
             <h3>data အကုန် ရှင်း</h3>
           </div>
-          <p className="banner info" role="status">နမူနာခန်းမှာ ရှိနေသည်။ ပင်မမှတ်တမ်း data ရှင်းရန် ပင်မမှတ်တမ်းသို့ ပြန်ပါ။</p>
+          <p className="banner info">နမူနာခန်းမှာ ရှိနေသည်။ ပင်မမှတ်တမ်း data ရှင်းရန် ပင်မမှတ်တမ်းသို့ ပြန်ပါ။</p>
         </section>
       ) : (
         <section className="card stack danger-zone">
