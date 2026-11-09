@@ -1,15 +1,16 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { applyMerge } from '../domain/backup.ts';
-import { buildDemoStore } from '../domain/demo.ts';
+import { applyMerge, mergeMedications } from '../domain/backup.ts';
+import { buildDemoStore, isStaleDemoSet } from '../domain/demo.ts';
 import { byteLength, interpretStorageEvent, loadStore, readRaw, replaceStore, saveStore, type StorageReason } from '../domain/storage.ts';
-import { DEMO_STORAGE_KEY, PREF_KEY, STORAGE_KEY, type Reading, type StoreData } from '../domain/types.ts';
-import { emptyStore } from '../domain/validate.ts';
+import { DEMO_STORAGE_KEY, PREF_KEY, STORAGE_KEY, type Medication, type Reading, type StoreData } from '../domain/types.ts';
+import { createId, emptyStore, issueMessage, validateMedication } from '../domain/validate.ts';
 
 interface LogContextValue {
   hydrated: boolean;
   demo: boolean;
   setDemo: (on: boolean) => void;
   readings: Reading[];
+  medications: Medication[];
   loadError: 'unavailable' | 'corrupt' | null;
   saveMessage: string | null;
   clearSaveMessage: () => void;
@@ -20,7 +21,23 @@ interface LogContextValue {
   updateReading: (reading: Reading) => boolean;
   deleteReading: (id: string) => boolean;
   restoreReading: (reading: Reading) => boolean;
-  importReadings: (incoming: { accepted: Reading[]; updates: Reading[] }, mode: 'merge' | 'replace') => boolean;
+  addMedication: (input: { name: string; dose: string; notes: string }) => boolean;
+  removeMedication: (id: string) => boolean;
+  importReadings: (
+    incoming: { accepted: Reading[]; updates: Reading[]; medications?: Medication[] },
+    mode: 'merge' | 'replace',
+  ) => boolean;
+}
+
+/** Rebuild a demo store that predates the generated 3-month rows. Demo room only. */
+function reseedStaleDemo(
+  storage: Storage,
+  key: string,
+  loaded: { ok: true; data: StoreData; empty: boolean },
+): { ok: true; data: StoreData; empty: boolean } {
+  if (loaded.empty || !isStaleDemoSet(loaded.data.readings)) return loaded;
+  const seeded = saveStore(storage, key, buildDemoStore(), loaded.data.revision);
+  return seeded.ok ? { ok: true, data: seeded.data, empty: false } : loaded;
 }
 
 const LogContext = createContext<LogContextValue | null>(null);
@@ -81,7 +98,8 @@ export function LogProvider({ children }: { children: ReactNode }) {
     const loaded = loadStore(storage, key);
     setDemoFlag(useDemo);
     if (loaded.ok) {
-      setData(loaded.data);
+      const fresh = useDemo ? reseedStaleDemo(storage, key, loaded) : loaded;
+      setData(fresh.data);
       setLoadError(null);
     } else {
       setLoadError(loaded.reason);
@@ -149,6 +167,7 @@ export function LogProvider({ children }: { children: ReactNode }) {
       hydrated,
       demo,
       readings: data.readings,
+      medications: data.medications,
       loadError,
       saveMessage,
       clearSaveMessage: () => setSaveMessage(null),
@@ -165,6 +184,8 @@ export function LogProvider({ children }: { children: ReactNode }) {
         if (on && loaded.ok && loaded.empty) {
           const seeded = saveStore(box, key, buildDemoStore(), 0);
           loaded = seeded.ok ? { ok: true, data: seeded.data, empty: false } : loadStore(box, key);
+        } else if (on && loaded.ok) {
+          loaded = reseedStaleDemo(box, key, loaded);
         }
         if (loaded.ok) {
           setData(loaded.data);
@@ -205,10 +226,28 @@ export function LogProvider({ children }: { children: ReactNode }) {
           if (current.readings.some((item) => item.id === reading.id)) return current;
           return { ...current, readings: [...current.readings, reading] };
         }),
+      addMedication: (input) => {
+        const stamp = new Date().toISOString();
+        const parsed = validateMedication({ ...input, id: createId(), createdAt: stamp, updatedAt: stamp });
+        if (!parsed.ok) {
+          setSaveMessage(issueMessage(parsed.errors[0]?.code ?? 'invalid'));
+          return false;
+        }
+        return commit((current) => ({
+          ...current,
+          medications: [...current.medications, parsed.value].sort((a, b) => a.name.localeCompare(b.name)),
+        }));
+      },
+      removeMedication: (id) =>
+        commit((current) => ({ ...current, medications: current.medications.filter((item) => item.id !== id) })),
       importReadings: (incoming, mode) =>
         commit((current) => ({
           ...current,
           readings: mode === 'replace' ? incoming.accepted : applyMerge(current.readings, incoming),
+          medications:
+            mode === 'replace'
+              ? [...(incoming.medications ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+              : mergeMedications(current.medications, incoming.medications ?? []),
         })),
     };
   }, [hydrated, demo, data, loadError, saveMessage, rawBackup]);

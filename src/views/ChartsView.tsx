@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { bpSeries, CHART_GAP_MS, glucoseSeries, polylines, yDomain, type ChartPoint } from '../domain/chart.ts';
+import { bpSeries, cappedDomain, CHART_GAP_MS, glucoseSeries, polylines, yDomain, type ChartPoint } from '../domain/chart.ts';
 import { filterReadings } from '../domain/history.ts';
 import { MEAL_LABEL } from '../domain/labels.ts';
+import { BP_TARGET, FASTING_TARGET, POSTMEAL_TARGET_MAX, summarizeReadings, type MonthSummary } from '../domain/summary.ts';
 import { dateKey, formatWallTime, shiftDateKey } from '../domain/time.ts';
 import type { GlucoseUnit, MealContext, Reading } from '../domain/types.ts';
 import { useLog } from '../store/LogProvider.tsx';
@@ -23,6 +24,11 @@ export function ChartsView() {
   const mmol = glucoseSeries(ranged, 'mmol/L');
   const active = unit === 'mg/dL' ? mg : mmol;
   const pressure = bpSeries(ranged);
+  const summary = useMemo(() => {
+    if (ranged.length === 0) return null;
+    const dates = ranged.map((reading) => dateKey(new Date(reading.recordedAt))).sort();
+    return summarizeReadings(ranged, dates[0] ?? '', dates[dates.length - 1] ?? '');
+  }, [ranged]);
 
   return (
     <div className="stack">
@@ -43,6 +49,8 @@ export function ChartsView() {
         <h3>ဂလူးကို့စ် ({unit})</h3>
         <Trend
           yLabel={unit}
+          cap={unit === 'mg/dL' ? 300 : 16.7}
+          band={unit === 'mg/dL' ? { min: 70, max: 180, label: '70–180' } : { min: 3.9, max: 10.0, label: '3.9–10.0' }}
           guides={unit === 'mg/dL' ? [{ y: 70, label: '၇၀' }, { y: 300, label: '၃၀၀' }] : [{ y: 3.9, label: '၃.၉' }, { y: 16.7, label: '၁၆.၇' }]}
           series={active.map((series) => ({
             id: series.context,
@@ -52,23 +60,54 @@ export function ChartsView() {
             points: series.points,
           }))}
         />
+        <GlucoseLine summary={summary} />
+        <p className="hint">mmol ဂရပ် {mmol.reduce((sum, series) => sum + series.points.length, 0)} မှတ်၊ mg/dL ဂရပ် {mg.reduce((sum, series) => sum + series.points.length, 0)} မှတ်။</p>
         <PointTable rows={active.flatMap((series) => series.points.map((point) => ({ ...point, label: MEAL_LABEL[series.context] })))} valueLabel={unit} />
       </section>
       <section className="card stack">
         <h3>သွေးပေါင် (mmHg)</h3>
         <Trend
           yLabel="mmHg"
+          cap={200}
           guides={[{ y: 180, label: 'SYS ၁၈၀' }, { y: 120, label: 'DIA ၁၂၀' }]}
           series={[
             { id: 'sys', label: 'အပေါ်', color: '#0e5c56', points: pressure.systolic },
             { id: 'dia', label: 'အောက်', color: '#1d4e89', points: pressure.diastolic },
-            { id: 'pul', label: 'ခုန်နှုန်း', color: '#8a4b12', points: pressure.pulse },
           ]}
         />
-        <p className="hint">mmol ဂရပ် {mmol.reduce((sum, series) => sum + series.points.length, 0)} မှတ်၊ mg/dL ဂရပ် {mg.reduce((sum, series) => sum + series.points.length, 0)} မှတ်။</p>
+        <BpLine summary={summary} />
+      </section>
+      <section className="card stack">
+        <h3>သွေးခုန်နှုန်း (တစ်မိနစ်)</h3>
+        <Trend
+          yLabel="ခုန်နှုန်း"
+          cap={150}
+          guides={[]}
+          series={[{ id: 'pul', label: 'ခုန်နှုန်း', color: '#8a4b12', points: pressure.pulse }]}
+        />
       </section>
     </div>
   );
+}
+
+function GlucoseLine({ summary }: { summary: MonthSummary | null }) {
+  if (!summary) return null;
+  const parts: string[] = [];
+  if (summary.fasting.avg != null) {
+    parts.push(`အစာရှောင် ပျမ်းမျှ ${summary.fasting.avg} mg/dL (target ${FASTING_TARGET.min}–${FASTING_TARGET.max})`);
+  }
+  if (summary.postmeal.avg != null) {
+    parts.push(`အစာစားပြီး ပျမ်းမျှ ${summary.postmeal.avg} mg/dL (target ${POSTMEAL_TARGET_MAX} အောက်)`);
+  }
+  if (parts.length === 0) return null;
+  return <p className="hint">{parts.join(' · ')}</p>;
+}
+
+function BpLine({ summary }: { summary: MonthSummary | null }) {
+  if (!summary || summary.bp.avgSys == null || summary.bp.avgDia == null) return null;
+  const parts = [`သွေးပေါင် ပျမ်းမျှ ${summary.bp.avgSys}/${summary.bp.avgDia} (target ${BP_TARGET.sys}/${BP_TARGET.dia} အောက်)`];
+  if (summary.bp.avgPulse != null) parts.push(`ခုန်နှုန်း ပျမ်းမျှ ${summary.bp.avgPulse}`);
+  return <p className="hint">{parts.join(' · ')}</p>;
 }
 
 function inRange(readings: Reading[], days: 7 | 30 | 90 | 'all'): Reading[] {
@@ -82,14 +121,18 @@ function Trend({
   series,
   guides,
   yLabel,
+  cap,
+  band,
 }: {
   series: { id: string; label: string; color: string; dashed?: boolean; points: ChartPoint[] }[];
   guides: { y: number; label: string }[];
   yLabel: string;
+  cap?: number;
+  band?: { min: number; max: number; label: string };
 }) {
   const values = series.flatMap((item) => item.points.map((point) => point.y));
   if (values.length === 0) return <p>ဤကာလတွင် ပြစရာမရှိပါ။</p>;
-  const domain = yDomain(values, guides.map((guide) => guide.y));
+  const domain = cap == null ? yDomain(values, guides.map((guide) => guide.y)) : cappedDomain(values, cap, guides.map((guide) => guide.y));
   const times = series.flatMap((item) => item.points.map((point) => point.t));
   let tMin = Math.min(...times);
   let tMax = Math.max(...times);
@@ -101,11 +144,27 @@ function Trend({
   const height = 280;
   const pad = { l: 52, r: 12, t: 16, b: 28 };
   const xOf = (t: number) => pad.l + ((t - tMin) / (tMax - tMin)) * (width - pad.l - pad.r);
-  const yOf = (y: number) => pad.t + (1 - (y - domain.min) / (domain.max - domain.min)) * (height - pad.t - pad.b);
+  const clampY = (y: number) => (cap == null ? y : Math.min(y, cap));
+  const yOf = (y: number) => pad.t + (1 - (clampY(y) - domain.min) / (domain.max - domain.min)) * (height - pad.t - pad.b);
   const ticks = [domain.min, (domain.min + domain.max) / 2, domain.max];
   return (
     <div>
       <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${yLabel} ဂရပ်`}>
+        {band && band.max > domain.min && band.min < domain.max ? (
+          <g>
+            <rect
+              x={pad.l}
+              width={width - pad.l - pad.r}
+              y={yOf(Math.min(band.max, domain.max))}
+              height={Math.max(0, yOf(Math.max(band.min, domain.min)) - yOf(Math.min(band.max, domain.max)))}
+              fill="#0e5c56"
+              fillOpacity="0.07"
+            />
+            <text x={width - pad.r - 4} y={yOf(Math.min(band.max, domain.max)) + 13} fontSize="11" textAnchor="end" fill="#0e5c56">
+              {band.label}
+            </text>
+          </g>
+        ) : null}
         {ticks.map((tick) => (
           <g key={tick}>
             <line x1={pad.l} x2={width - pad.r} y1={yOf(tick)} y2={yOf(tick)} stroke="#d3e1da" />
@@ -121,7 +180,7 @@ function Trend({
           ) : null
         ))}
         {series.map((item) =>
-          polylines(item.points, CHART_GAP_MS).map((line, index) =>
+          polylines(item.points.map((point) => ({ ...point, y: clampY(point.y) })), CHART_GAP_MS).map((line, index) =>
             line.length > 1 ? (
               <polyline
                 key={`${item.id}-${index}`}
@@ -135,11 +194,28 @@ function Trend({
           ),
         )}
         {series.flatMap((item) =>
-          item.points.map((point) => (
-            <circle key={`${item.id}-${point.id}-${point.y}`} cx={xOf(point.t)} cy={yOf(point.y)} r="4.5" fill={item.color}>
-              <title>{`${item.label} ${point.y} ${formatWallTime(new Date(point.t))}`}</title>
-            </circle>
-          )),
+          item.points.map((point) => {
+            const capped = cap != null && point.y > cap;
+            const cx = xOf(point.t);
+            const cy = yOf(point.y);
+            if (capped) {
+              return (
+                <g key={`${item.id}-${point.id}-${point.y}`}>
+                  <path d={`M ${cx} ${cy - 8} L ${cx + 6} ${cy + 4} L ${cx - 6} ${cy + 4} Z`} fill={item.color}>
+                    <title>{`${item.label} ${point.y} ${formatWallTime(new Date(point.t))}`}</title>
+                  </path>
+                  <text x={cx} y={Math.max(11, cy - 11)} fontSize="11" textAnchor="middle" fill={item.color}>
+                    {formatTick(point.y)}
+                  </text>
+                </g>
+              );
+            }
+            return (
+              <circle key={`${item.id}-${point.id}-${point.y}`} cx={cx} cy={cy} r="4.5" fill={item.color}>
+                <title>{`${item.label} ${point.y} ${formatWallTime(new Date(point.t))}`}</title>
+              </circle>
+            );
+          }),
         )}
       </svg>
       <div className="row">

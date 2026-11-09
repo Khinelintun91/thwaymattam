@@ -81,6 +81,7 @@ img { max-width: 100%; }
   color: var(--teal-deep);
   font-size: 0.86rem;
   font-weight: 600;
+  line-height: 1.4;
 }
 .demo-chip { background: #fff1cc; color: #6d4a00; }
 
@@ -206,6 +207,12 @@ h3 { font-size: 1.05rem; margin-bottom: 6px; }
 .banner.info { background: var(--info-bg); border-color: #c5d9ea; }
 .banner.emergency h3 { color: var(--red); }
 .banner.urgent h3, .banner.warning h3 { color: var(--amber); }
+.flag { background: var(--amber-bg); font-weight: 700; }
+.flag-emergency { background: var(--red-bg); font-weight: 700; }
+.summary-box { break-inside: avoid; }
+.summary-box h3 { margin-bottom: 2px; }
+.summary-box p { margin-bottom: 4px; }
+.summary-box ul { margin: 4px 0; padding-left: 20px; }
 .badge.warn { background: var(--amber-bg); color: var(--amber); }
 .badge.emergency, .badge.urgent { background: var(--red-bg); color: var(--red); }
 .badge.info { background: var(--info-bg); color: var(--info); }

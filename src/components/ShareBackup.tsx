@@ -26,7 +26,7 @@ export function ShareBackupButton({ readings }: { readings?: Reading[] }) {
   const [message, setMessage] = useState<string | null>(null);
 
   async function share() {
-    const payload = backupPayload(source);
+    const payload = backupPayload(source, log.medications);
     const file = new File([payload.json], payload.name, { type: 'application/json' });
     const outcome = await shareBackupFile(file, {
       target: typeof navigator === 'undefined' ? undefined : navigator,

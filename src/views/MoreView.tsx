@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { importPreviewSummary, importResultSummary, planImport, readImport, type ImportReadResult } from '../domain/backup.ts';
 import { backupPayload } from '../domain/share.ts';
 import { toCsv } from '../domain/csv.ts';
-import type { Reading } from '../domain/types.ts';
+import type { Medication, Reading } from '../domain/types.ts';
 import { ShareBackupButton } from '../components/ShareBackup.tsx';
 import { useLog } from '../store/LogProvider.tsx';
 
@@ -17,10 +17,14 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
     updates: Reading[];
     duplicateCount: number;
     replacement: Reading[];
+    medications: Medication[];
   } | null>(null);
   const [replaceArmed, setReplaceArmed] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageTone, setMessageTone] = useState<'info' | 'warning'>('info');
+  const [medName, setMedName] = useState('');
+  const [medDose, setMedDose] = useState('');
+  const [medMessage, setMedMessage] = useState<string | null>(null);
 
   function download(filename: string, content: string, mime: string) {
     const blob = new Blob([content], { type: mime });
@@ -35,8 +39,17 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
   }
 
   function exportJson() {
-    const payload = backupPayload(log.readings);
+    const payload = backupPayload(log.readings, log.medications);
     download(payload.name, payload.json, 'application/json');
+  }
+
+  function addMedication() {
+    if (medName.trim() === '') return;
+    if (log.addMedication({ name: medName, dose: medDose, notes: '' })) {
+      setMedName('');
+      setMedDose('');
+      setMedMessage('ထည့်ပြီးပါပြီ။');
+    }
   }
 
   function exportCsv() {
@@ -76,13 +89,16 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
       updates: plan.updates,
       duplicateCount: plan.duplicates.length,
       replacement,
+      medications: result.medications,
     });
   }
 
   function confirm(mode: 'merge' | 'replace') {
     if (!preview) return;
     const ok = log.importReadings(
-      mode === 'replace' ? { accepted: preview.replacement, updates: [] } : { accepted: preview.accepted, updates: preview.updates },
+      mode === 'replace'
+        ? { accepted: preview.replacement, updates: [], medications: preview.medications }
+        : { accepted: preview.accepted, updates: preview.updates, medications: preview.medications },
       mode,
     );
     if (ok) {
@@ -119,7 +135,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
         {preview?.result.ok ? (
           <div className="stack">
             <p>{preview.fileName}</p>
-            <p className="banner info" role="status">{importPreviewSummary(preview.accepted.length, preview.duplicateCount, preview.updates.length)}{preview.result.rejected.length > 0 ? ` ပယ်ထားသော ${preview.result.rejected.length} ခု ပါသည်။` : ''}</p>
+            <p className="banner info" role="status">{importPreviewSummary(preview.accepted.length, preview.duplicateCount, preview.updates.length)}{preview.result.rejected.length > 0 ? ` ပယ်ထားသော ${preview.result.rejected.length} ခု ပါသည်။` : ''}{preview.medications.length > 0 ? ` ဆေးဝါးစာရင်း ${preview.medications.length} ခု ပါမည်။` : ''}</p>
             {preview.result.rejected.length > 0 ? (
               <ul>
                 {preview.result.rejected.slice(0, 8).map((row) => (
@@ -141,6 +157,41 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
       <section className="card stack">
         <h3>ဆရာဝန်အတွက် စာရွက်</h3>
         <button type="button" className="btn btn-primary" onClick={onPrint}>အနှစ်ချုပ် ပြင်ဆင်မည်</button>
+      </section>
+      <section className="card stack">
+        <h3>ဆေးဝါးစာရင်း</h3>
+        <p>ဆရာဝန်အတွက် အနှစ်ချုပ်တွင် ပြမည်။ ဖုန်းထဲမှာပဲ သိမ်းသည်။ ဆေးပမာဏကို ဤအက်ပ်က မညွှန်ပါ။</p>
+        {log.medications.length === 0 ? (
+          <p>ဆေးဝါးစာရင်း မရှိပါ။</p>
+        ) : (
+          <ul>
+            {log.medications.map((medication) => (
+              <li key={medication.id} className="spread">
+                <span>
+                  {medication.name}
+                  {medication.dose ? ` — ${medication.dose}` : ''}
+                  {medication.notes ? ` (${medication.notes})` : ''}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-small btn-quiet"
+                  aria-label={`${medication.name} ကို ဖယ်မည်`}
+                  onClick={() => log.removeMedication(medication.id)}
+                >
+                  ဖယ်မည်
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <label className="field">ဆေးအမည်
+          <input value={medName} onChange={(event) => setMedName(event.target.value)} autoComplete="off" placeholder="ဥပမာ Metformin" />
+        </label>
+        <label className="field">ပမာဏ / သောက်ပုံ (မထည့်လည်းရ)
+          <input value={medDose} onChange={(event) => setMedDose(event.target.value)} autoComplete="off" placeholder="ဥပမာ 500 mg · မနက် ၁ လုံး" />
+        </label>
+        <button type="button" className="btn btn-primary" disabled={medName.trim() === ''} onClick={addMedication}>ထည့်မည်</button>
+        {medMessage ? <p role="status">{medMessage}</p> : null}
       </section>
       <section className="card stack">
         <h3>နမူနာ</h3>
