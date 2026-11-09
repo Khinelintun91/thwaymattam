@@ -22,7 +22,7 @@ describe('3-month demo data', () => {
   it('detects the old 9-row demo set as stale and the new set as fresh', () => {
     const fresh = buildDemoReadings(NOW);
     expect(isStaleDemoSet(fresh)).toBe(false);
-    expect(isStaleDemoSet([])).toBe(false);
+    expect(isStaleDemoSet([])).toBe(true);
     const old = fresh.filter((reading) => !/^demo-(glu|bp)-d\d+-/.test(reading.id));
     expect(old.length).toBe(9);
     expect(isStaleDemoSet(old)).toBe(true);

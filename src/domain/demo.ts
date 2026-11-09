@@ -5,10 +5,11 @@ import { emptyStore } from './validate.ts';
 /**
  * True when a stored demo set predates the 3-month generated rows: the old
  * set has only the 9 anchor rows and no generated `demo-*-d<offset>-*` ids.
- * An empty set is not stale — the normal seeding path handles it.
+ * An empty set is stale too — a demo store that exists but holds no readings
+ * would otherwise show an empty demo forever.
  */
 export function isStaleDemoSet(readings: Reading[]): boolean {
-  return readings.length > 0 && !readings.some((reading) => /^demo-(glu|bp)-d\d+-/.test(reading.id));
+  return !readings.some((reading) => /^demo-(glu|bp)-d\d+-/.test(reading.id));
 }
 
 /** Sample medicines for the demo room only. Clearly labelled as samples. */
