@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   computeSyncStats,
   formatReadingForSheet,
@@ -9,6 +9,8 @@ import {
   setReadingSyncStatus,
   loadSyncMeta,
   recordSyncResult,
+  postReadingsToWebhook,
+  testWebhookConnection,
 } from './sync.ts';
 import type { GlucoseReading, BpReading, Reading } from './types.ts';
 import type { StorageLike } from './storage.ts';
@@ -141,5 +143,80 @@ describe('Google Sheets Sync helper', () => {
     expect(formatSyncTimestamp('')).toBe('မရှိသေးပါ');
     const formatted = formatSyncTimestamp('2026-11-09T08:30:00.000Z');
     expect(formatted).toContain('နိုဝင်ဘာ');
+  });
+
+  describe('webhook fetch (no-cors)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const sampleReading: GlucoseReading = {
+      id: 'gl-test-1',
+      type: 'glucose',
+      recordedAt: '2026-11-09T08:00:00.000Z',
+      glucoseValue: 110,
+      glucoseUnit: 'mg/dL',
+      mealContext: 'fasting',
+      minutesSinceMealStart: null,
+      symptoms: [],
+      notes: '',
+      source: 'manual',
+      createdAt: '2026-11-09T08:00:00.000Z',
+      updatedAt: '2026-11-09T08:00:00.000Z',
+    };
+
+    it('posts readings with mode no-cors and treats a resolved fetch as success', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({} as Response);
+      vi.stubGlobal('fetch', fetchMock);
+      const res = await postReadingsToWebhook('https://script.google.com/macros/s/xyz/exec', [sampleReading]);
+      expect(res.ok).toBe(true);
+      expect(res.count).toBe(1);
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+      expect(init?.mode).toBe('no-cors');
+      expect(init?.method).toBe('POST');
+    });
+
+    it('reports failure when the readings post rejects', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Failed to fetch')));
+      const res = await postReadingsToWebhook('https://script.google.com/macros/s/xyz/exec', [sampleReading]);
+      expect(res.ok).toBe(false);
+      expect(res.error).toBe('Failed to fetch');
+    });
+
+    it('returns ok for an empty readings list without fetching', async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      const res = await postReadingsToWebhook('https://script.google.com/macros/s/xyz/exec', []);
+      expect(res.ok).toBe(true);
+      expect(res.count).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('tests the connection with mode no-cors and treats a resolved fetch as success', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({} as Response);
+      vi.stubGlobal('fetch', fetchMock);
+      const res = await testWebhookConnection('https://script.google.com/macros/s/xyz/exec');
+      expect(res.ok).toBe(true);
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+      expect(init?.mode).toBe('no-cors');
+      expect(init?.method).toBe('POST');
+    });
+
+    it('reports failure when the connection test rejects', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Failed to fetch')));
+      const res = await testWebhookConnection('https://script.google.com/macros/s/xyz/exec');
+      expect(res.ok).toBe(false);
+      expect(res.error).toBe('Failed to fetch');
+    });
+
+    it('rejects a non-http webhook URL without fetching', async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      expect((await postReadingsToWebhook('', [sampleReading])).ok).toBe(false);
+      expect((await testWebhookConnection('ftp://example.com/x')).ok).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
   });
 });

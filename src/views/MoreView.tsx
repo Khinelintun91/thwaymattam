@@ -27,6 +27,9 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
   const [clearOpen, setClearOpen] = useState(false);
   const [clearMessage, setClearMessage] = useState<string | null>(null);
 
+  const [demoClearOpen, setDemoClearOpen] = useState(false);
+  const [demoClearMessage, setDemoClearMessage] = useState<string | null>(null);
+
   // Sync state
   const [webhookUrl, setWebhookUrl] = useState(log.syncConfig.webhookUrl);
   const [autoSync, setAutoSync] = useState(log.syncConfig.autoSync);
@@ -508,6 +511,14 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
           Data အကုန်ရှင်းမည်
         </button>
         {clearMessage ? <p className="status-pill" role="status">{clearMessage}</p> : null}
+        <button
+          type="button"
+          className="btn btn-quiet-danger btn-block"
+          onClick={() => setDemoClearOpen(true)}
+        >
+          နမူနာဒေတာ ဖျက်မည်
+        </button>
+        {demoClearMessage ? <p className="status-pill" role="status">{demoClearMessage}</p> : null}
       </section>
 
       {/* Clear Confirmation Modal */}
@@ -528,6 +539,28 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
               }}
             >
               အားလုံး ဖျက်မည်
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+
+      {/* Delete Demo Data Confirmation Modal */}
+      {demoClearOpen ? (
+        <Modal title="နမူနာဒေတာ ဖျက်မည်" heroIcon={<WarningIcon />} onClose={() => setDemoClearOpen(false)}>
+          <p>နမူနာ (စမ်းသပ်) မှတ်တမ်းများကို အကုန် ဖျက်မည်။ ပင်မမှတ်တမ်းကို မထိပါ။ ဖျက်ပြီးရင် နမူနာဒေတာ ပြန်မပေါ်ပါ။</p>
+          <div className="row">
+            <button type="button" className="btn btn-quiet" onClick={() => setDemoClearOpen(false)}>မဖျက်ပါ</button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => {
+                if (log.clearDemoData()) {
+                  setDemoClearMessage('နမူနာဒေတာ ဖျက်ပြီးပါပြီ။');
+                  setDemoClearOpen(false);
+                }
+              }}
+            >
+              နမူနာဒေတာ ဖျက်မည်
             </button>
           </div>
         </Modal>

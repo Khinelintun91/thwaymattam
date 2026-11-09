@@ -18,7 +18,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'wasm-unsafe-eval'",
   "worker-src 'self' blob:",
-  "connect-src 'self'",
+  "connect-src 'self' https://script.google.com https://script.googleusercontent.com",
   "font-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",

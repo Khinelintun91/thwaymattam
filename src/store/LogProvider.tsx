@@ -39,6 +39,8 @@ interface LogContextValue {
   removeMedication: (id: string) => boolean;
   /** Wipes the main log (readings + medications). Demo room only via MoreView in the main room. */
   clearMainData: () => boolean;
+  /** Permanently removes the demo/sample store (224 sample readings). Returns to the main room. */
+  clearDemoData: () => boolean;
   importReadings: (
     incoming: { accepted: Reading[]; updates: Reading[]; medications?: Medication[] },
     mode: 'merge' | 'replace',
@@ -106,9 +108,11 @@ export function LogProvider({ children }: { children: ReactNode }) {
   const dataRef = useRef(data);
   const keyRef = useRef(STORAGE_KEY);
   const syncConfigRef = useRef(syncConfig);
+  const demoRef = useRef(demo);
   dataRef.current = data;
   keyRef.current = demo ? DEMO_STORAGE_KEY : STORAGE_KEY;
   syncConfigRef.current = syncConfig;
+  demoRef.current = demo;
 
   useEffect(() => {
     const storage = storageOf();
@@ -168,6 +172,8 @@ export function LogProvider({ children }: { children: ReactNode }) {
   // Online listener to flush pending or failed syncs
   useEffect(() => {
     const handleOnline = () => {
+      // Never sync from the demo room: sample readings must not reach the Sheet.
+      if (demoRef.current) return;
       const cfg = syncConfigRef.current;
       if (!cfg.webhookUrl || !cfg.autoSync) return;
       const storage = storageOf();
@@ -225,6 +231,10 @@ export function LogProvider({ children }: { children: ReactNode }) {
 
   // Trigger sync for a specific reading
   async function triggerSingleSync(reading: Reading): Promise<{ ok: boolean; error?: string }> {
+    // Never sync from the demo room: sample readings must not reach the Sheet.
+    if (demoRef.current) {
+      return { ok: false, error: 'နမူနာခန်းတွင် sync မလုပ်ပါ' };
+    }
     const cfg = syncConfigRef.current;
     const storage = storageOf();
     if (!cfg.webhookUrl) {
@@ -243,6 +253,10 @@ export function LogProvider({ children }: { children: ReactNode }) {
 
   // Retry pending and failed readings
   async function retryPendingNow(): Promise<{ ok: boolean; count: number; error?: string }> {
+    // Never sync from the demo room: sample readings must not reach the Sheet.
+    if (demoRef.current) {
+      return { ok: false, count: 0, error: 'နမူနာခန်းတွင် sync မလုပ်ပါ' };
+    }
     const cfg = syncConfigRef.current;
     const storage = storageOf();
     const currentReadings = dataRef.current.readings;
@@ -270,6 +284,10 @@ export function LogProvider({ children }: { children: ReactNode }) {
 
   // Sync all readings
   async function syncAllNow(): Promise<{ ok: boolean; count: number; error?: string }> {
+    // Never sync from the demo room: sample readings must not reach the Sheet.
+    if (demoRef.current) {
+      return { ok: false, count: 0, error: 'နမူနာခန်းတွင် sync မလုပ်ပါ' };
+    }
     const cfg = syncConfigRef.current;
     const storage = storageOf();
     const currentReadings = dataRef.current.readings;
@@ -405,6 +423,30 @@ export function LogProvider({ children }: { children: ReactNode }) {
       removeMedication: (id) =>
         commit((current) => ({ ...current, medications: current.medications.filter((item) => item.id !== id) })),
       clearMainData: () => commit(() => emptyStore()),
+      clearDemoData: () => {
+        const box = storageOf();
+        if (!box) return false;
+        try {
+          box.removeItem(DEMO_STORAGE_KEY);
+        } catch {
+          return false;
+        }
+        // Return to the main room and reload it. There is no demo toggle
+        // in the UI any more, so a removed demo store is never rebuilt.
+        try {
+          box.setItem(PREF_KEY, JSON.stringify({ demo: false }));
+        } catch {
+          /* ignore */
+        }
+        setDemoFlag(false);
+        const loaded = loadStore(box, STORAGE_KEY);
+        if (loaded.ok) {
+          setData(loaded.data);
+          setLoadError(null);
+          setRawBackup(null);
+        }
+        return true;
+      },
       importReadings: (incoming, mode) =>
         commit((current) => ({
           ...current,

@@ -253,6 +253,13 @@ export function formatReadingForSheet(reading: Reading) {
 
 /**
  * Send an array of readings to Google Sheets Apps Script Webhook.
+ *
+ * Google Apps Script web apps do not send CORS headers, so a normal
+ * fetch() from the GitHub Pages app is blocked by the browser and the
+ * request never reaches the script. mode: 'no-cors' lets the request
+ * through; the response is opaque and cannot be read, so a resolved
+ * fetch means the data was sent. The Content-Type stays text/plain
+ * (a CORS-safelisted simple header) so no preflight is triggered.
  */
 export async function postReadingsToWebhook(
   webhookUrl: string,
@@ -273,30 +280,15 @@ export async function postReadingsToWebhook(
   };
 
   try {
-    const res = await fetch(webhookUrl, {
+    await fetch(webhookUrl, {
       method: 'POST',
+      mode: 'no-cors',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
       body: JSON.stringify(payload),
     });
-
-    if (res.ok) {
-      try {
-        const data = await res.json();
-        if (data && data.status === 'error') {
-          return { ok: false, error: data.message || 'Google Sheet Script မှ အမှားတုံ့ပြန်ပါသည်' };
-        }
-        if (data && data.status === 'success') {
-          return { ok: true, count: typeof data.count === 'number' ? data.count : readings.length };
-        }
-      } catch {
-        return { ok: true, count: readings.length };
-      }
-      return { ok: true, count: readings.length };
-    }
-
-    return { ok: false, error: `HTTP ${res.status}: ${res.statusText || 'ချိတ်ဆက်မှု မအောင်မြင်ပါ'}` };
+    return { ok: true, count: readings.length };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: message || 'ကွန်ရက်ချိတ်ဆက်မှု မရပါ' };
@@ -305,6 +297,10 @@ export async function postReadingsToWebhook(
 
 /**
  * Test connectivity to the webhook endpoint.
+ *
+ * Same no-cors reason as postReadingsToWebhook: the Apps Script
+ * endpoint does not send CORS headers, so the response is opaque.
+ * A resolved fetch means the endpoint was reached.
  */
 export async function testWebhookConnection(webhookUrl: string): Promise<{ ok: boolean; error?: string }> {
   if (!webhookUrl || !webhookUrl.startsWith('http')) {
@@ -312,26 +308,13 @@ export async function testWebhookConnection(webhookUrl: string): Promise<{ ok: b
   }
   try {
     const payload = { action: 'ping', timestamp: new Date().toISOString() };
-    const res = await fetch(webhookUrl, {
+    await fetch(webhookUrl, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
     });
-    if (res.ok) {
-      try {
-        const data = await res.json();
-        if (data && (data.status === 'pong' || data.status === 'success')) {
-          return { ok: true };
-        }
-        if (data && data.status === 'error') {
-          return { ok: false, error: data.message || 'Script error' };
-        }
-      } catch {
-        return { ok: true };
-      }
-      return { ok: true };
-    }
-    return { ok: false, error: `HTTP ${res.status}: ${res.statusText || 'စစ်ဆေး၍ မရပါ'}` };
+    return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: message || 'ကွန်ရက်ချိတ်ဆက်မှု မရပါ' };
