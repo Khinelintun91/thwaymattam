@@ -108,7 +108,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
     const subject = encodeURIComponent('အဖေ့သွေးမှတ်တမ်း အနှစ်ချုပ်');
     const recentReadings = log.readings.slice(-10).map((r) => {
       const time = new Date(r.recordedAt).toLocaleString('my-MM', { timeZone: 'Asia/Yangon' });
-      const val = r.type === 'glucose' ? `${r.glucoseValue} ${r.glucoseUnit}` : `${r.systolic}/${r.diastolic} mmHg (HR: ${r.pulse || '-'})`;
+      const val = r.type === 'glucose' ? `${r.glucoseValue} ${r.glucoseUnit}` : `${r.systolic}/${r.diastolic} mmHg`;
       return `- ${time}: ${val} (${r.notes || 'မှတ်ချက်မရှိ'})`;
     }).join('\n');
     const body = encodeURIComponent(`အဖေ့ကျန်းမာရေး မှတ်တမ်း နောက်ဆုံးရလဒ်များ:\n\n${recentReadings}\n\nစုစုပေါင်း မှတ်တမ်း: ${log.readings.length} ခု`);

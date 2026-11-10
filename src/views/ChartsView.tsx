@@ -102,18 +102,20 @@ export function ChartsView() {
           />
           <BpLine summary={summary} />
         </section>
-        <section className="card stack chart-card">
-          <div className="chart-card-head">
-            <h3>သွေးခုန်နှုန်း (တစ်မိနစ်)</h3>
-            <span className="icon-well" aria-hidden="true"><HeartIcon /></span>
-          </div>
-          <Trend
-            yLabel="ခုန်နှုန်း"
-            cap={150}
-            guides={[]}
-            series={[{ id: 'pul', label: 'ခုန်နှုန်း', color: '#8B5CF6', points: pressure.pulse }]}
-          />
-        </section>
+        {pressure.pulse.length > 0 ? (
+          <section className="card stack chart-card">
+            <div className="chart-card-head">
+              <h3>သွေးခုန်နှုန်း (တစ်မိနစ်)</h3>
+              <span className="icon-well" aria-hidden="true"><HeartIcon /></span>
+            </div>
+            <Trend
+              yLabel="ခုန်နှုန်း"
+              cap={150}
+              guides={[]}
+              series={[{ id: 'pul', label: 'ခုန်နှုန်း', color: '#8B5CF6', points: pressure.pulse }]}
+            />
+          </section>
+        ) : null}
       </div>
     </div>
   );

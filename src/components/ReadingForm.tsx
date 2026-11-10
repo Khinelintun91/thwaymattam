@@ -285,27 +285,7 @@ export function ReadingForm({
                 <span className="bp-tile-unit-label">mmHg</span>
               </div>
 
-              {/* Pulse */}
-              <div className={`bp-tile ${hasError(errors, 'pulse') ? 'has-error' : ''}`}>
-                <label className="bp-tile-header" htmlFor="bp-pulse">
-                  <span>နှလုံးခုန်</span>
-                  <span className="bp-tile-abbr">PUL</span>
-                </label>
-                <div className="bp-tile-input-row">
-                  <input
-                    id="bp-pulse"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="72"
-                    value={draft.pulse}
-                    aria-invalid={hasError(errors, 'pulse')}
-                    className="bp-tile-input"
-                    onChange={(event) => setNumber('pulse', event.target.value)}
-                  />
-                </div>
-                <span className="bp-tile-unit-label">bpm (မထည့်လည်းရ)</span>
-              </div>
+
             </div>
 
             <p className="hero-input-tip" style={{ margin: 0 }}>
@@ -490,7 +470,7 @@ function toCandidate(draft: Draft, editing: Reading | null): Record<string, unkn
       type: 'bp',
       systolic: parseLooseNumber(draft.systolic),
       diastolic: parseLooseNumber(draft.diastolic),
-      pulse: draft.pulse === '' ? null : parseLooseNumber(draft.pulse),
+      pulse: null,
     };
   }
   return {

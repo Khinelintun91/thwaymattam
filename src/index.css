@@ -1543,14 +1543,8 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
 
 .bp-tiles {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-@media (max-width: 360px) {
-  .bp-tiles {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .bp-tile {
