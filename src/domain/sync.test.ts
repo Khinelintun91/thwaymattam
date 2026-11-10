@@ -11,6 +11,7 @@ import {
   recordSyncResult,
   postReadingsToWebhook,
   testWebhookConnection,
+  DEFAULT_WEBHOOK_URL,
 } from './sync.ts';
 import type { GlucoseReading, BpReading, Reading } from './types.ts';
 import type { StorageLike } from './storage.ts';
@@ -73,9 +74,17 @@ describe('Google Sheets Sync helper', () => {
 
   it('saves and loads sync config', () => {
     const storage = memoryStorage();
-    expect(loadSyncConfig(storage).webhookUrl).toBe('');
+    expect(loadSyncConfig(storage).webhookUrl).toBe(DEFAULT_WEBHOOK_URL);
     saveSyncConfig({ webhookUrl: 'https://script.google.com/macros/s/xyz/exec', autoSync: true }, storage);
     expect(loadSyncConfig(storage).webhookUrl).toBe('https://script.google.com/macros/s/xyz/exec');
+  });
+
+  it('falls back to the pre-filled default when the saved URL is empty', () => {
+    const storage = memoryStorage();
+    saveSyncConfig({ webhookUrl: '', autoSync: true }, storage);
+    expect(loadSyncConfig(storage).webhookUrl).toBe(DEFAULT_WEBHOOK_URL);
+    saveSyncConfig({ webhookUrl: '   ', autoSync: true }, storage);
+    expect(loadSyncConfig(storage).webhookUrl).toBe(DEFAULT_WEBHOOK_URL);
   });
 
   it('updates and persists sync status per reading ID', () => {

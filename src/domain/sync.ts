@@ -39,8 +39,16 @@ export interface SyncStats {
   lastError: string | null;
 }
 
+/**
+ * Default webhook for Emma's own Google Sheet ("သွေးမှတ်တမ်း").
+ * Pre-filled so she never has to paste the long URL by hand; the
+ * setting can still be changed or cleared from the More page.
+ */
+export const DEFAULT_WEBHOOK_URL =
+  'https://script.google.com/macros/s/AKfycbyRHDkJvvt3UkOOfH_KoUwAHcFzvRss6aple_moJyn50QpTm35hotcIAoVgSbWc5sfLHA/exec';
+
 const DEFAULT_CONFIG: SyncConfig = {
-  webhookUrl: '',
+  webhookUrl: DEFAULT_WEBHOOK_URL,
   autoSync: true,
 };
 
@@ -66,8 +74,11 @@ export function loadSyncConfig(storage: StorageLike | null = defaultStorage()): 
     const raw = storage.getItem(SYNC_CONFIG_KEY);
     if (!raw) return DEFAULT_CONFIG;
     const parsed = JSON.parse(raw);
+    const savedUrl = typeof parsed.webhookUrl === 'string' ? parsed.webhookUrl.trim() : '';
     return {
-      webhookUrl: typeof parsed.webhookUrl === 'string' ? parsed.webhookUrl.trim() : '',
+      // Fall back to the pre-filled default when nothing was saved yet,
+      // so the phone shows the webhook URL without pasting it by hand.
+      webhookUrl: savedUrl || DEFAULT_CONFIG.webhookUrl,
       autoSync: typeof parsed.autoSync === 'boolean' ? parsed.autoSync : true,
     };
   } catch {
