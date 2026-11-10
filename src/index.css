@@ -1741,3 +1741,441 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
     min-width: 160px;
   }
 }
+
+/* ---- Modern Charts: Donut & Daily Cards ---- */
+.charts-modern {
+  display: grid;
+  gap: 16px;
+}
+
+.charts-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.charts-top-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.charts-sub-p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted, #64748B);
+}
+
+.charts-controls-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.charts-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.charts-type-row > .segmented:first-child {
+  flex: 1 1 200px;
+}
+
+/* Donut Card */
+.donut-card {
+  padding: 18px 16px;
+  border-radius: 20px;
+  display: grid;
+  gap: 16px;
+  background: var(--card-bg, #FFFFFF);
+  border: 1px solid var(--line, #E2E8F0);
+  box-shadow: 0 2px 8px rgba(30, 41, 79, 0.04);
+}
+
+.donut-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.donut-card-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.donut-target-note {
+  font-size: 12px;
+  color: var(--muted, #64748B);
+  font-weight: 500;
+}
+
+.donut-content {
+  display: grid;
+  gap: 18px;
+}
+
+.donut-wrap {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  align-items: center;
+}
+
+@media (min-width: 600px) {
+  .donut-wrap {
+    grid-template-columns: 200px 1fr;
+    gap: 24px;
+  }
+}
+
+.donut-chart-container {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.donut-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.donut-center-info {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+
+.donut-center-pct {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--fg, #0F172A);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-center-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent, #3B5BF5);
+  margin-top: 4px;
+}
+
+.donut-center-sub {
+  font-size: 11px;
+  color: var(--muted, #64748B);
+  margin-top: 2px;
+}
+
+.donut-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.donut-legend-card {
+  background: var(--accent-softer, #F8FAFC);
+  border: 1px solid var(--line, #E2E8F0);
+  border-radius: 14px;
+  padding: 10px 8px;
+  text-align: center;
+  display: grid;
+  gap: 4px;
+}
+
+.donut-legend-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #64748B);
+}
+
+.donut-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donut-legend-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.donut-legend-count {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--fg, #0F172A);
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-legend-pct {
+  font-size: 12px;
+  color: var(--muted, #64748B);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Donut Averages Strip */
+.donut-avg-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line, #E2E8F0);
+}
+
+.donut-avg-block {
+  background: var(--accent-softer, #F8FAFC);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+}
+
+.donut-avg-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--fg, #0F172A);
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-avg-val small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #64748B);
+}
+
+.donut-avg-lbl {
+  font-size: 12px;
+  color: var(--muted, #64748B);
+  line-height: 1.4;
+}
+
+/* Daily Breakdown Section */
+.daily-breakdown-section {
+  display: grid;
+  gap: 12px;
+}
+
+.daily-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.daily-section-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.daily-section-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted, #64748B);
+}
+
+.daily-cards-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.daily-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line, #E2E8F0);
+  background: var(--card-bg, #FFFFFF);
+  display: grid;
+  gap: 12px;
+}
+
+.daily-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line, #F1F5F9);
+}
+
+.daily-card-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--fg, #0F172A);
+}
+
+.daily-card-date svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent, #3B5BF5);
+  flex-shrink: 0;
+}
+
+.daily-card-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #64748B);
+  background: var(--accent-softer, #F1F5F9);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.daily-items-list {
+  display: grid;
+  gap: 8px;
+}
+
+.daily-item-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--accent-softer, #F8FAFC);
+}
+
+.daily-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.daily-item-time {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg, #0F172A);
+}
+
+.daily-item-context {
+  font-size: 12px;
+  color: var(--muted, #64748B);
+}
+
+.daily-item-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.daily-item-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--fg, #0F172A);
+  font-variant-numeric: tabular-nums;
+}
+
+.daily-item-value small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #64748B);
+}
+
+/* Status Pills */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-normal {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.badge-high {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.badge-alert {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+
+.daily-item-notes {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 4px;
+  font-size: 12px;
+}
+
+.daily-item-symptom-tag {
+  background: #FEE2E2;
+  color: #991B1B;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.daily-item-note-text {
+  color: var(--muted, #475569);
+  font-style: italic;
+}
+
+/* Trend Drawer */
+.trend-toggle-area {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.trend-toggle-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, #3B5BF5);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: var(--accent-softer, #F1F5F9);
+}
+
+.trend-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.trend-drawer {
+  margin-top: 8px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
