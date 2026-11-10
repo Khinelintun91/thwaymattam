@@ -255,10 +255,11 @@ h3 { font-size: 16px; line-height: 1.4; font-weight: 600; margin-bottom: 6px; }
 .field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); min-width: 0; }
 .field input, .field select, .field textarea {
   min-height: 52px;
-  border: 1px solid transparent;
+  border: 1.5px solid #CBD5E1;
   border-radius: var(--radius-input);
   padding: 0 16px;
-  background: #F7F8FB;
+  background: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   font-size: 16px;
   font-weight: 400;
   color: var(--ink);
@@ -1308,5 +1309,441 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   }
   .more-head h3 {
     font-size: 15px;
+  }
+}
+
+/* ========================================================
+   Form & Input Visibility Refinements (UI/UX Priorities 1-3)
+   ======================================================== */
+
+::placeholder {
+  color: #94A3B8;
+  opacity: 1;
+}
+
+.card-soft {
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.field-title-sm {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.field-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.daypart-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-readout-pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  background: #F1F5F9;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid #E2E8F0;
+}
+
+/* Hero Glucose Input Card */
+.hero-input-card {
+  background: #FFFFFF;
+  border: 2px solid #94A3B8;
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-input-card:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(59, 91, 245, 0.16);
+}
+
+.hero-input-card.has-error {
+  border-color: var(--red);
+  background: #FFF7F8;
+}
+
+.hero-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-input-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Unit Toggle Switch */
+.unit-switch-group {
+  display: inline-flex;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 9999px;
+  border: 1px solid #CBD5E1;
+}
+
+.unit-switch-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.unit-switch-btn.active {
+  background: #FFFFFF;
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  font-weight: 700;
+}
+
+.hero-field-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.hero-large-input {
+  width: 100%;
+  height: 68px;
+  min-height: 68px;
+  text-align: center;
+  font-size: 38px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: #F8FAFC;
+  border: 2px solid #CBD5E1;
+  border-radius: 18px;
+  color: var(--ink);
+  padding: 0 64px 0 20px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.hero-large-input:focus {
+  background: #FFFFFF;
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 91, 245, 0.18);
+}
+
+.hero-large-input::placeholder {
+  color: #94A3B8;
+  opacity: 0.7;
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.hero-unit-tag {
+  position: absolute;
+  right: 18px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.hero-input-tip {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.conversion-banner {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E40AF;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Meal Context Quick Pills */
+.pills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border-radius: 9999px;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pill-choice:active {
+  transform: scale(0.96);
+}
+
+.pill-choice.active {
+  background: var(--accent);
+  color: #FFFFFF;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(59, 91, 245, 0.3);
+}
+
+.pill-emoji {
+  font-size: 15px;
+}
+
+/* BP Hero Card & Tiles */
+.bp-hero-card {
+  background: #FFFFFF;
+  border: 2px solid #94A3B8;
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.bp-norm-pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0369A1;
+  background: #E0F2FE;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid #BAE6FD;
+}
+
+.bp-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 360px) {
+  .bp-tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bp-tile {
+  background: #F8FAFC;
+  border: 2px solid #CBD5E1;
+  border-radius: 18px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.bp-tile:focus-within {
+  border-color: var(--accent);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(59, 91, 245, 0.18);
+}
+
+.bp-tile.has-error {
+  border-color: var(--red);
+  background: #FFF7F8;
+}
+
+.bp-tile-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bp-tile-abbr {
+  color: var(--accent);
+  font-size: 11px;
+  background: #EEF2FF;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.bp-tile-input-row {
+  width: 100%;
+}
+
+.bp-tile-input {
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: var(--ink);
+}
+
+.bp-tile-input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 91, 245, 0.18);
+}
+
+.bp-tile-input::placeholder {
+  color: #94A3B8;
+  opacity: 0.7;
+}
+
+.bp-tile-unit-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Symptoms Section & Pills */
+.symptoms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-link-action {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.symptoms-pills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.symptom-choice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  min-height: 42px;
+  border-radius: 9999px;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.symptom-choice-btn:active {
+  transform: scale(0.96);
+}
+
+.symptom-choice-btn.selected {
+  background: #EFF6FF;
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(59, 91, 245, 0.15);
+}
+
+.symptom-choice-btn.emergency {
+  border-color: #FECACA;
+  color: #DC2626;
+  background: #FEF2F2;
+}
+
+.symptom-choice-btn.emergency.selected {
+  background: #DC2626;
+  color: #FFFFFF;
+  border-color: #DC2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.check-mark {
+  font-weight: 800;
+  font-size: 12px;
+}
+
+/* Sticky Bottom Actions Bar (Thumb-friendly) */
+.sticky-actions-bar {
+  position: sticky;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 22px;
+  border: 1.5px solid #CBD5E1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 25;
+  margin-top: 12px;
+}
+
+.sticky-actions-bar .btn {
+  min-height: 54px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-save-action {
+  box-shadow: 0 4px 14px rgba(59, 91, 245, 0.35);
+}
+
+.btn-cancel-action {
+  border: 1.5px solid #CBD5E1;
+}
+
+@media (min-width: 840px) {
+  .add-layout > .sticky-actions-bar {
+    grid-column: 1 / -1;
+    position: sticky;
+    bottom: 16px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .add-layout > .sticky-actions-bar .btn {
+    flex: 0 0 auto;
+    min-width: 160px;
   }
 }

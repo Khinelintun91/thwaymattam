@@ -27,8 +27,7 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
   const [clearOpen, setClearOpen] = useState(false);
   const [clearMessage, setClearMessage] = useState<string | null>(null);
 
-  const [demoClearOpen, setDemoClearOpen] = useState(false);
-  const [demoClearMessage, setDemoClearMessage] = useState<string | null>(null);
+
 
   // Sync state
   const [webhookUrl, setWebhookUrl] = useState(log.syncConfig.webhookUrl);
@@ -200,59 +199,25 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
     }
   }
 
+  const isConfigured = Boolean(webhookUrl.trim());
+
   return (
     <div className="stack more-view">
-      <h2>ပိုမို</h2>
+      <h2 className="view-title">ပိုမို</h2>
 
-      {/* 1. Google Sheets Auto-Sync & Diagnostics (Main Cloud Backup) */}
+      {/* 1. Google Sheets Auto-Sync (Cloud Backup) */}
       <section className="card stack">
         <div className="more-head">
           <span className="icon-well icon-well-lg" aria-hidden="true"><CloudIcon /></span>
           <div>
             <h3 style={{ margin: 0 }}>Google Sheets Auto-Sync</h3>
             <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
-              ဖုန်းထဲက ဒေတာများကို မိမိ၏ Google Sheet သို့ အလိုအလျောက် ပို့ပေးပါသည်
+              ဖုန်းထဲက ဒေတာများကို Google Sheet သို့ အလိုအလျောက် ပို့ပေးပါသည်
             </p>
           </div>
         </div>
 
-        {/* Webhook Configuration Inputs */}
-        <label className="field">
-          Google Apps Script Webhook URL
-          <input
-            type="url"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-            placeholder="https://script.google.com/macros/s/.../exec"
-          />
-        </label>
-
-        {/* Clean Auto-Sync Toggle Box */}
-        <label className="sync-toggle-row">
-          <input
-            type="checkbox"
-            checked={autoSync}
-            onChange={(e) => setAutoSync(e.target.checked)}
-          />
-          <span>တိုင်းတာမှုအသစ် ထည့်ပြီးတိုင်း Google Sheet သို့ အလိုအလျောက် ပို့မည် (Auto-Sync)</span>
-        </label>
-
-        {/* Settings Action Buttons */}
-        <div className="btn-grid-2">
-          <button type="button" className="btn btn-primary" onClick={handleSaveSync}>
-            ဆက်တင်သိမ်းမည်
-          </button>
-          <button
-            type="button"
-            className="btn btn-quiet"
-            disabled={syncBusy || !webhookUrl.trim()}
-            onClick={handleTestWebhook}
-          >
-            {syncBusy ? 'စစ်ဆေးနေ…' : 'ချိတ်ဆက်မှု စမ်းသပ်မည်'}
-          </button>
-        </div>
-
-        {/* Sync Diagnostics Dashboard Box */}
+        {/* Sync Summary Dashboard Box */}
         <div className="sync-diag-box">
           <div className="diag-stat-row">
             <div className="diag-stat-tile">
@@ -285,22 +250,22 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
             <p className="banner info" role="status" style={{ margin: 0 }}>{syncStatusMsg}</p>
           ) : null}
 
-          {/* Primary Retry Button */}
+          {/* Primary Action Button */}
           <button
             type="button"
             className="btn btn-primary btn-block"
-            disabled={syncBusy || !webhookUrl.trim() || (log.syncStats.pendingCount === 0 && log.syncStats.failedCount === 0)}
+            disabled={syncBusy || !isConfigured || (log.syncStats.pendingCount === 0 && log.syncStats.failedCount === 0)}
             onClick={handleRetryPending}
           >
             {syncBusy ? 'ပို့နေသည်…' : '🔄 ပို့ရန်ကျန်ဒေတာ ပြန်ပို့မည် (Retry)'}
           </button>
 
-          {/* Secondary Actions Grid */}
+          {/* Secondary Quick Buttons */}
           <div className="btn-grid-2">
             <button
               type="button"
               className="btn btn-quiet"
-              disabled={syncBusy || !webhookUrl.trim() || log.readings.length === 0}
+              disabled={syncBusy || !isConfigured || log.readings.length === 0}
               onClick={handleSyncAllNow}
             >
               ဒေတာအားလုံး ပြန်ပို့မည် ({log.readings.length})
@@ -313,6 +278,41 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
               စစ်ဆေးမှု အပြည့်အစုံ
             </button>
           </div>
+        </div>
+
+        {/* Webhook Configuration - Crisp visible inputs */}
+        <label className="field">
+          <span className="field-title-sm">Google Apps Script Webhook URL</span>
+          <input
+            type="url"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/.../exec"
+          />
+        </label>
+
+        {/* Auto-Sync Toggle Row */}
+        <label className="sync-toggle-row">
+          <input
+            type="checkbox"
+            checked={autoSync}
+            onChange={(e) => setAutoSync(e.target.checked)}
+          />
+          <span>တိုင်းတာမှုအသစ် ထည့်ပြီးတိုင်း Google Sheet သို့ အလိုအလျောက် ပို့မည် (Auto-Sync)</span>
+        </label>
+
+        <div className="btn-grid-2">
+          <button type="button" className="btn btn-primary" onClick={handleSaveSync}>
+            ဆက်တင်သိမ်းမည်
+          </button>
+          <button
+            type="button"
+            className="btn btn-quiet"
+            disabled={syncBusy || !isConfigured}
+            onClick={handleTestWebhook}
+          >
+            {syncBusy ? 'စစ်ဆေးနေ…' : 'ချိတ်ဆက်မှု စမ်းသပ်မည်'}
+          </button>
         </div>
 
         {/* Collapsible Apps Script Help */}
@@ -477,11 +477,11 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
 
         <div className="grid-2-fields">
           <label className="field" style={{ margin: 0 }}>
-            ဆေးအမည်
+            <span className="field-title-sm">ဆေးအမည်</span>
             <input value={medName} onChange={(event) => setMedName(event.target.value)} autoComplete="off" placeholder="Metformin" />
           </label>
           <label className="field" style={{ margin: 0 }}>
-            ပမာဏ / သောက်ပုံ
+            <span className="field-title-sm">ပမာဏ / သောက်ပုံ</span>
             <input value={medDose} onChange={(event) => setMedDose(event.target.value)} autoComplete="off" placeholder="500 mg · မနက် ၁ လုံး" />
           </label>
         </div>
@@ -497,76 +497,41 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
           <span className="icon-well icon-well-lg icon-well-danger" aria-hidden="true"><TrashIcon /></span>
           <div>
             <h3 style={{ margin: 0 }}>Data အကုန်ရှင်း</h3>
-            <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>
-              ဖုန်းထဲရှိ ပင်မမှတ်တမ်း {log.readings.length} ခုကို အပြီးရှင်းမည်
-            </p>
+            <p className="muted" style={{ margin: '2px 0 0', fontSize: '13px' }}>ဖုန်းထဲရှိ မှတ်တမ်းအားလုံးကို ဖျက်ခြင်း</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn btn-danger btn-block"
-          disabled={log.readings.length === 0 && log.medications.length === 0}
-          onClick={() => setClearOpen(true)}
-        >
-          Data အကုန်ရှင်းမည်
+        <button type="button" className="btn btn-danger" onClick={() => { setClearMessage(null); setClearOpen(true); }}>
+          <TrashIcon />မှတ်တမ်းအားလုံး ဖျက်မည်
         </button>
-        {clearMessage ? <p className="status-pill" role="status">{clearMessage}</p> : null}
-        <button
-          type="button"
-          className="btn btn-quiet-danger btn-block"
-          onClick={() => setDemoClearOpen(true)}
-        >
-          နမူနာဒေတာ ဖျက်မည်
-        </button>
-        {demoClearMessage ? <p className="status-pill" role="status">{demoClearMessage}</p> : null}
       </section>
 
-      {/* Clear Confirmation Modal */}
+      {/* Clear Modal */}
       {clearOpen ? (
-        <Modal title="Data အကုန်ရှင်းမည်" heroIcon={<WarningIcon />} onClose={() => setClearOpen(false)}>
-          <p>ပင်မမှတ်တမ်း {log.readings.length} ခု နှင့် ဆေးဝါးစာရင်း {log.medications.length} မျိုး ကို အကုန် ဖျက်မည်။ ဖျက်ပြီးရင် ပြန်မရပါ။</p>
-          <p className="modal-question">JSON ဘက်အပ် ထုတ်ထားပြီးပြီလား။</p>
-          <div className="row">
-            <button type="button" className="btn btn-quiet" onClick={() => setClearOpen(false)}>မဖျက်ပါ</button>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => {
-                if (log.clearMainData()) {
-                  setClearMessage('ရှင်းပြီးပါပြီ။');
-                  setClearOpen(false);
-                }
-              }}
-            >
-              အားလုံး ဖျက်မည်
-            </button>
+        <Modal title="မှတ်တမ်းအားလုံး ဖျက်မည်လား" onClose={() => setClearOpen(false)}>
+          <div className="stack">
+            <p>ဖုန်းထဲရှိ သွေးမှတ်တမ်းများနှင့် ဆေးဝါးစာရင်း အားလုံး ပျက်သွားပါမည်။ ဤလုပ်ဆောင်ချက်ကို ပြန်ပြင်၍မရပါ။</p>
+            {clearMessage ? <p className="banner warning">{clearMessage}</p> : null}
+            <div className="modal-actions">
+              <button type="button" className="btn btn-quiet" onClick={() => setClearOpen(false)}>
+                မဖျက်ပါ
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  const ok = log.clearMainData();
+                  if (ok) setClearOpen(false);
+                  else setClearMessage('ဖျက်၍မရပါ');
+                }}
+              >
+                သေချာသည် ဖျက်မည်
+              </button>
+            </div>
           </div>
         </Modal>
       ) : null}
 
-      {/* Delete Demo Data Confirmation Modal */}
-      {demoClearOpen ? (
-        <Modal title="နမူနာဒေတာ ဖျက်မည်" heroIcon={<WarningIcon />} onClose={() => setDemoClearOpen(false)}>
-          <p>နမူနာ (စမ်းသပ်) မှတ်တမ်းများကို အကုန် ဖျက်မည်။ ပင်မမှတ်တမ်းကို မထိပါ။ ဖျက်ပြီးရင် နမူနာဒေတာ ပြန်မပေါ်ပါ။</p>
-          <div className="row">
-            <button type="button" className="btn btn-quiet" onClick={() => setDemoClearOpen(false)}>မဖျက်ပါ</button>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => {
-                if (log.clearDemoData()) {
-                  setDemoClearMessage('နမူနာဒေတာ ဖျက်ပြီးပါပြီ။');
-                  setDemoClearOpen(false);
-                }
-              }}
-            >
-              နမူနာဒေတာ ဖျက်မည်
-            </button>
-          </div>
-        </Modal>
-      ) : null}
-
-      {/* Diagnostics Full Modal */}
+      {/* Sync Diagnostics Modal */}
       {showDiagModal ? (
         <SyncDiagnosticsModal onClose={() => setShowDiagModal(false)} />
       ) : null}
@@ -576,20 +541,18 @@ export function MoreView({ onPrint }: { onPrint: () => void }) {
 
 function importError(code: string): string {
   switch (code) {
-    case 'wrong-app':
-      return 'ဤအက်ပ်၏ ဘက်အပ်ဖိုင်မဟုတ်ပါ။';
-    case 'unsupported-version':
-      return 'ဖိုင်ဗားရှင်းကို မဖတ်နိုင်ပါ။';
-    case 'too-many':
-      return 'မှတ်တမ်းအရေအတွက် များလွန်းသည်။';
+    case 'empty':
+      return 'မှတ်တမ်း မပါပါ။';
+    case 'invalid':
+      return 'ဖိုင်ဖော်မတ် မမှန်ပါ။';
     default:
-      return 'ဖိုင်ပုံစံ မမှန်ပါ။';
+      return 'ဖိုင်ဖတ်၍ မရပါ။';
   }
 }
 
 function MoreIcon({ children }: { children: React.ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {children}
     </svg>
   );
@@ -598,7 +561,7 @@ function MoreIcon({ children }: { children: React.ReactNode }) {
 function CloudIcon() {
   return (
     <MoreIcon>
-      <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+      <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" />
     </MoreIcon>
   );
 }
@@ -607,8 +570,8 @@ function DownloadIcon() {
   return (
     <MoreIcon>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="m7 10 5 5 5-5" />
-      <path d="M12 15V3" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
     </MoreIcon>
   );
 }
@@ -617,8 +580,8 @@ function UploadIcon() {
   return (
     <MoreIcon>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="m17 8-5-5-5 5" />
-      <path d="M12 3v12" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
     </MoreIcon>
   );
 }
@@ -626,11 +589,10 @@ function UploadIcon() {
 function DocIcon() {
   return (
     <MoreIcon>
-      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-      <path d="M10 9H8" />
-      <path d="M16 13H8" />
-      <path d="M16 17H8" />
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
     </MoreIcon>
   );
 }
@@ -638,27 +600,8 @@ function DocIcon() {
 function PillIcon() {
   return (
     <MoreIcon>
-      <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
-      <path d="m8.5 8.5 7 7" />
-    </MoreIcon>
-  );
-}
-
-function WarningIcon() {
-  return (
-    <MoreIcon>
-      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-      <path d="M12 9v4" />
-      <path d="M12 17h.01" />
-    </MoreIcon>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <MoreIcon>
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
+      <line x1="10.5" y1="13.5" x2="13.5" y2="10.5" />
+      <path d="m8.5 8.5 7 7a4.95 4.95 0 0 0 7-7l-7-7a4.95 4.95 0 0 0-7 7Z" />
     </MoreIcon>
   );
 }
@@ -666,8 +609,16 @@ function ArrowRightIcon() {
 function PlusIcon() {
   return (
     <MoreIcon>
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </MoreIcon>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <MoreIcon>
+      <polyline points="9 18 15 12 9 6" />
     </MoreIcon>
   );
 }

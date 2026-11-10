@@ -26,7 +26,7 @@ export function blankDraft(type: 'glucose' | 'bp', now = new Date()): Draft {
     date: wall.date,
     time: wall.time,
     glucoseValue: '',
-    glucoseUnit: '',
+    glucoseUnit: 'mg/dL',
     mealContext: 'unknown',
     minutesSinceMealStart: '',
     systolic: '',
