@@ -73,29 +73,31 @@ function Shell() {
   return (
     <>
       <a className="skip" href="#main">အကြောင်းအရာသို့ သွားမည်</a>
-      <nav className="nav no-print" aria-label="အဓိက">
-        {([
-          ['home', 'ပင်မ'],
-          ['history', 'မှတ်တမ်း'],
-          ['add', 'ထည့်မည်'],
-          ['charts', 'ဂရပ်'],
-          ['more', 'ပိုမို'],
-        ] as const).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            className={id === 'add' ? 'nav-btn nav-btn-fab' : 'nav-btn'}
-            aria-current={view === id ? 'page' : undefined}
-            onClick={() => go(id)}
-          >
-            <span className="nav-icon">
-              <NavIcon id={id} />
-            </span>
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
-      <main id="main" className="shell">
+      {view !== 'add' && view !== 'print' ? (
+        <nav className="nav no-print" aria-label="အဓိက">
+          {([
+            ['home', 'ပင်မ'],
+            ['history', 'မှတ်တမ်း'],
+            ['add', 'ထည့်မည်'],
+            ['charts', 'ဂရပ်'],
+            ['more', 'ပိုမို'],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={id === 'add' ? 'nav-btn nav-btn-fab' : 'nav-btn'}
+              aria-current={view === id ? 'page' : undefined}
+              onClick={() => go(id)}
+            >
+              <span className="nav-icon">
+                <NavIcon id={id} />
+              </span>
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+      ) : null}
+      <main id="main" className={`shell ${view === 'add' ? 'shell-form' : ''}`}>
         <header className="topbar no-print">
           <div>
             <h1 className="brand">သွေးမှတ်တမ်း</h1>

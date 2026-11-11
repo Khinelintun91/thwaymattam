@@ -245,7 +245,6 @@ function LatestCard({
               </span>
             ) : null}
           </div>
-          <SafetyList notices={noticesFor(reading, all)} />
         </div>
       ) : (
         <div className="latest-empty-box">

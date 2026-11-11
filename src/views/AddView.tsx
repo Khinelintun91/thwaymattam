@@ -39,12 +39,23 @@ export function AddView({
 
   return (
     <div className="stack">
-      <h2 className="add-title">
-        <span className="icon-well icon-well-sm" aria-hidden="true">
-          {draft.type === 'glucose' ? <DropletIcon /> : <HeartIcon />}
-        </span>
-        {editing ? 'ပြင်ဆင်မည်' : 'မှတ်တမ်းထည့်မည်'}
-      </h2>
+      <div className="add-header">
+        <button
+          type="button"
+          className="btn-back-header"
+          onClick={onDone}
+          aria-label="နောက်သို့ ပြန်သွားမည်"
+          title="နောက်သို့"
+        >
+          <BackChevronIcon />
+        </button>
+        <h2 className="add-title">
+          <span className="icon-well icon-well-sm" aria-hidden="true">
+            {draft.type === 'glucose' ? <DropletIcon /> : <HeartIcon />}
+          </span>
+          {editing ? 'ပြင်ဆင်မည်' : 'မှတ်တမ်းထည့်မည်'}
+        </h2>
+      </div>
       {editing ? null : (
         <div className="choice-grid" ref={typeRef} role="radiogroup" aria-label="မှတ်တမ်းအမျိုးအစား">
           <button type="button" className="choice" role="radio" aria-checked={draft.type === 'glucose'} onClick={() => switchType('glucose')}>
@@ -76,13 +87,13 @@ export function AddView({
   );
 }
 
-function AddIcon({ children }: { children: ReactNode }) {
+function AddIcon({ children, strokeWidth = 1.8 }: { children: ReactNode; strokeWidth?: number }) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -90,6 +101,14 @@ function AddIcon({ children }: { children: ReactNode }) {
     >
       {children}
     </svg>
+  );
+}
+
+function BackChevronIcon() {
+  return (
+    <AddIcon strokeWidth={2.4}>
+      <path d="M15 18l-6-6 6-6" />
+    </AddIcon>
   );
 }
 
