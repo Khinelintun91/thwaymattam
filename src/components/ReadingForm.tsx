@@ -387,9 +387,11 @@ export function ReadingForm({
   );
 }
 
-function FormIcon({ children, strokeWidth = 1.8 }: { children: ReactNode; strokeWidth?: number }) {
+function FormIcon({ children, strokeWidth = 1.8, size = 18 }: { children: ReactNode; strokeWidth?: number; size?: number }) {
   return (
     <svg
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -406,7 +408,7 @@ function FormIcon({ children, strokeWidth = 1.8 }: { children: ReactNode; stroke
 
 function CheckIcon() {
   return (
-    <FormIcon strokeWidth={2.5}>
+    <FormIcon strokeWidth={2.2} size={18}>
       <path d="M4 12.5l5 5L20 6.5" />
     </FormIcon>
   );
@@ -414,7 +416,7 @@ function CheckIcon() {
 
 function XIcon() {
   return (
-    <FormIcon>
+    <FormIcon strokeWidth={2.2} size={18}>
       <path d="M6 6l12 12M18 6L6 18" />
     </FormIcon>
   );
