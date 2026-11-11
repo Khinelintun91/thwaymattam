@@ -44,8 +44,7 @@ export function AddView({
           type="button"
           className="btn-back-header"
           onClick={onDone}
-          aria-label="နောက်သို့ ပြန်သွားမည်"
-          title="နောက်သို့"
+          aria-label="မသိမ်းပါ"
         >
           <BackChevronIcon />
         </button>
