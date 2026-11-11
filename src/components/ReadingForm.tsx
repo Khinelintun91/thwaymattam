@@ -372,15 +372,15 @@ export function ReadingForm({
         </section>
       ) : null}
 
-      {/* Sticky Bottom Actions - Thumb-friendly */}
-      <div className="sticky-actions-bar">
+      {/* Form Action Buttons (Natural flow, thumb-friendly, no overlap) */}
+      <div className="form-actions-bar">
         <button type="button" className="btn btn-quiet btn-cancel-action" onClick={onCancel}>
           <XIcon />
-          မသိမ်းပါ
+          <span>မသိမ်းပါ</span>
         </button>
         <button type="button" className="btn btn-primary btn-save-action" onClick={save}>
           <CheckIcon />
-          {editing ? 'ပြင်ဆင်ချက်သိမ်းမည်' : 'သိမ်းဆည်းမည်'}
+          <span>{editing ? 'ပြင်ဆင်ချက်သိမ်းမည်' : 'သိမ်းဆည်းမည်'}</span>
         </button>
       </div>
     </div>
