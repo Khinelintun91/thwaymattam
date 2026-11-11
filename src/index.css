@@ -1965,6 +1965,16 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   width: 100%;
 }
 
+.donut-legend-grid.has-unknown {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 420px) {
+  .donut-legend-grid.has-unknown {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .donut-legend-card {
   background: var(--accent-softer, #F8FAFC);
   border: 1px solid var(--line, #E2E8F0);
@@ -2202,6 +2212,12 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   background: #FEE2E2;
   color: #B91C1C;
   border: 1px solid #FECACA;
+}
+
+.badge-unknown {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
 }
 
 .daily-item-notes {

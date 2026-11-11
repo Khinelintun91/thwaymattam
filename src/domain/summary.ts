@@ -1,7 +1,7 @@
 import { filterReadings } from './history.ts';
-import { isEmergencySymptom, type Reading, type Symptom } from './types.ts';
+import { isEmergencySymptom, type BpReading, type GlucoseReading, type Reading, type Symptom } from './types.ts';
 import { dateKey, shiftDateKey } from './time.ts';
-import { convertGlucose } from './units.ts';
+import { convertGlucose, isBpCrisis, isGlucoseLow, isGlucoseVeryHigh } from './units.ts';
 
 /**
  * The app's documented target ranges (see the safety thresholds):
@@ -99,15 +99,61 @@ export interface WeekSummary {
   inRangePercent: number | null;
 }
 
-function readingInRange(reading: Reading): boolean {
-  if (reading.type === 'glucose') {
-    const mg = Math.round(convertGlucose(reading.glucoseValue, reading.glucoseUnit, 'mg/dL'));
-    if (mg < LOW_GLUCOSE_MGDL) return false;
-    if (reading.mealContext === 'fasting') return mg >= FASTING_TARGET.min && mg <= FASTING_TARGET.max;
-    if (reading.mealContext === 'postmeal') return mg < POSTMEAL_TARGET_MAX;
-    return mg <= 180;
+export type TargetCategory = 'normal' | 'high' | 'alert' | 'unknown';
+
+export interface ReadingStatus {
+  category: TargetCategory;
+  label: string;
+  badgeClass: string;
+  color: string;
+}
+
+export function evaluateGlucose(reading: GlucoseReading): ReadingStatus {
+  if (isGlucoseLow(reading.glucoseValue, reading.glucoseUnit)) {
+    return { category: 'alert', label: 'နိမ့်', badgeClass: 'badge-alert', color: '#EF4444' };
   }
-  return reading.systolic < BP_TARGET.sys && reading.diastolic < BP_TARGET.dia;
+  if (isGlucoseVeryHigh(reading.glucoseValue, reading.glucoseUnit)) {
+    return { category: 'alert', label: 'အလွန်မြင့်', badgeClass: 'badge-alert', color: '#EF4444' };
+  }
+  if (reading.mealContext === 'unknown') {
+    return { category: 'unknown', label: 'အခြေအနေမသိ', badgeClass: 'badge-unknown', color: '#94A3B8' };
+  }
+  const mg = Math.round(convertGlucose(reading.glucoseValue, reading.glucoseUnit, 'mg/dL'));
+  if (reading.mealContext === 'fasting') {
+    if (mg > FASTING_TARGET.max) {
+      return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
+    }
+    return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
+  }
+  if (reading.mealContext === 'postmeal') {
+    if (mg >= POSTMEAL_TARGET_MAX) {
+      return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
+    }
+    return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
+  }
+  if (mg > 180) {
+    return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
+  }
+  return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
+}
+
+export function evaluateBp(reading: BpReading): ReadingStatus {
+  const { systolic, diastolic } = reading;
+  if (isBpCrisis(systolic, diastolic)) {
+    return { category: 'alert', label: 'အလွန်မြင့်', badgeClass: 'badge-alert', color: '#EF4444' };
+  }
+  if (systolic >= BP_TARGET.sys || diastolic >= BP_TARGET.dia) {
+    return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
+  }
+  return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
+}
+
+export function classifyReading(reading: Reading): ReadingStatus {
+  return reading.type === 'glucose' ? evaluateGlucose(reading) : evaluateBp(reading);
+}
+
+export function readingInRange(reading: Reading): boolean {
+  return classifyReading(reading).category === 'normal';
 }
 
 /** This week's readings (today + 6 days back) with the in-target share, for the Home summary strip. */

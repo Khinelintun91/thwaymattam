@@ -3,9 +3,9 @@ import { useSlidingPill } from '../components/useSlidingPill.ts';
 import { bpSeries, cappedDomain, CHART_GAP_MS, glucoseSeries, polylines, yDomain, type ChartPoint } from '../domain/chart.ts';
 import { filterReadings, groupByDay } from '../domain/history.ts';
 import { MEAL_LABEL, SYMPTOM_LABEL } from '../domain/labels.ts';
-import { BP_TARGET, FASTING_TARGET, POSTMEAL_TARGET_MAX, summarizeReadings, type MonthSummary } from '../domain/summary.ts';
+import { summarizeReadings, type MonthSummary, type ReadingStatus, type TargetCategory, evaluateGlucose, evaluateBp, classifyReading } from '../domain/summary.ts';
 import { dateKey, formatTime12, shiftDateKey } from '../domain/time.ts';
-import type { BpReading, GlucoseReading, GlucoseUnit, MealContext, Reading } from '../domain/types.ts';
+import type { BpReading, GlucoseUnit, MealContext, Reading } from '../domain/types.ts';
 import { convertGlucose, formatGlucose } from '../domain/units.ts';
 import { dayHeading, displayNotes } from '../components/format.ts';
 import { useLog } from '../store/LogProvider.tsx';
@@ -17,61 +17,15 @@ const RANGE_OPTIONS = [
   { value: 'all' as const, label: 'အားလုံး' },
 ];
 
-export type TargetCategory = 'normal' | 'high' | 'alert';
-
-export interface ReadingStatus {
-  category: TargetCategory;
-  label: string;
-  badgeClass: string;
-  color: string;
-}
-
-export function evaluateGlucose(reading: GlucoseReading): ReadingStatus {
-  const mg = Math.round(convertGlucose(reading.glucoseValue, reading.glucoseUnit, 'mg/dL'));
-  if (mg < 70) {
-    return { category: 'alert', label: 'နိမ့်', badgeClass: 'badge-alert', color: '#EF4444' };
-  }
-  if (mg >= 300) {
-    return { category: 'alert', label: 'အလွန်မြင့်', badgeClass: 'badge-alert', color: '#EF4444' };
-  }
-  if (reading.mealContext === 'fasting') {
-    if (mg >= FASTING_TARGET.min && mg <= FASTING_TARGET.max) {
-      return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
-    }
-    return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
-  }
-  if (reading.mealContext === 'postmeal') {
-    if (mg < POSTMEAL_TARGET_MAX) {
-      return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
-    }
-    return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
-  }
-  if (mg <= 180) {
-    return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
-  }
-  return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
-}
-
-export function evaluateBp(reading: BpReading): ReadingStatus {
-  const { systolic, diastolic } = reading;
-  if (systolic >= 180 || diastolic >= 120) {
-    return { category: 'alert', label: 'အလွန်မြင့်', badgeClass: 'badge-alert', color: '#EF4444' };
-  }
-  if (systolic < 90 || diastolic < 60) {
-    return { category: 'alert', label: 'နိမ့်', badgeClass: 'badge-alert', color: '#EF4444' };
-  }
-  if (systolic >= BP_TARGET.sys || diastolic >= BP_TARGET.dia) {
-    return { category: 'high', label: 'မြင့်', badgeClass: 'badge-high', color: '#F59E0B' };
-  }
-  return { category: 'normal', label: 'ပုံမှန်', badgeClass: 'badge-normal', color: '#10B981' };
-}
+export type { ReadingStatus, TargetCategory };
+export { evaluateGlucose, evaluateBp, classifyReading };
 
 export function ChartsView() {
   const { readings } = useLog();
   const [days, setDays] = useState<1 | 7 | 30 | 'all'>(30);
   const [metric, setMetric] = useState<'glucose' | 'bp'>('glucose');
   const [unit, setUnit] = useState<GlucoseUnit>('mg/dL');
-  const [showTrend, setShowTrend] = useState(false);
+  const [showTrend, setShowTrend] = useState(true);
 
   const rangeRef = useRef<HTMLDivElement>(null);
   const metricRef = useRef<HTMLDivElement>(null);
@@ -95,40 +49,34 @@ export function ChartsView() {
     let normalCount = 0;
     let highCount = 0;
     let alertCount = 0;
+    let unknownCount = 0;
 
-    if (metric === 'glucose') {
-      for (const r of activeReadings) {
-        if (r.type !== 'glucose') continue;
-        const st = evaluateGlucose(r);
-        if (st.category === 'normal') normalCount++;
-        else if (st.category === 'high') highCount++;
-        else alertCount++;
-      }
-    } else {
-      for (const r of activeReadings) {
-        if (r.type !== 'bp') continue;
-        const st = evaluateBp(r);
-        if (st.category === 'normal') normalCount++;
-        else if (st.category === 'high') highCount++;
-        else alertCount++;
-      }
+    for (const r of activeReadings) {
+      const st = r.type === 'glucose' ? evaluateGlucose(r) : evaluateBp(r);
+      if (st.category === 'normal') normalCount++;
+      else if (st.category === 'high') highCount++;
+      else if (st.category === 'alert') alertCount++;
+      else if (st.category === 'unknown') unknownCount++;
     }
 
     const total = activeReadings.length;
     const normalPct = total > 0 ? Math.round((normalCount / total) * 100) : 0;
     const highPct = total > 0 ? Math.round((highCount / total) * 100) : 0;
-    const alertPct = total > 0 ? Math.max(0, 100 - normalPct - highPct) : 0;
+    const alertPct = total > 0 ? Math.round((alertCount / total) * 100) : 0;
+    const unknownPct = total > 0 && unknownCount > 0 ? Math.max(0, 100 - normalPct - highPct - alertPct) : 0;
 
     return {
       total,
       normalCount,
       highCount,
       alertCount,
+      unknownCount,
       normalPct,
       highPct,
       alertPct,
+      unknownPct,
     };
-  }, [activeReadings, metric]);
+  }, [activeReadings]);
 
   const summary = useMemo(() => {
     if (ranged.length === 0) return null;
@@ -203,6 +151,9 @@ export function ChartsView() {
                 { id: 'normal', label: 'ပုံမှန်', count: donutStats.normalCount, percent: donutStats.normalPct, color: '#10B981' },
                 { id: 'high', label: 'မြင့်', count: donutStats.highCount, percent: donutStats.highPct, color: '#F59E0B' },
                 { id: 'alert', label: 'သတိပြုရန်', count: donutStats.alertCount, percent: donutStats.alertPct, color: '#EF4444' },
+                ...(metric === 'glucose' || donutStats.unknownCount > 0
+                  ? [{ id: 'unknown', label: 'အခြေအနေမသိ', count: donutStats.unknownCount, percent: donutStats.unknownPct, color: '#94A3B8' }]
+                  : []),
               ]}
               centerValue={`${donutStats.normalPct}%`}
               centerLabel="ပုံမှန်ပစ်မှတ်"
@@ -275,29 +226,45 @@ export function ChartsView() {
           </div>
 
           {metric === 'glucose' ? (
-            <Trend
-              yLabel={unit}
-              cap={unit === 'mg/dL' ? 300 : 16.7}
-              band={unit === 'mg/dL' ? { min: 70, max: 180, label: '70–180' } : { min: 3.9, max: 10.0, label: '3.9–10.0' }}
-              guides={unit === 'mg/dL' ? [{ y: 70, label: '၇၀' }, { y: 300, label: '၃၀၀' }] : [{ y: 3.9, label: '၃.၉' }, { y: 16.7, label: '၁၆.၇' }]}
-              series={activeSeries.map((series) => ({
-                id: series.context,
-                label: MEAL_LABEL[series.context],
-                color: CONTEXT_COLOR[series.context],
-                dashed: series.context === 'unknown',
-                points: series.points,
-              }))}
-            />
+            <>
+              <Trend
+                yLabel={unit}
+                cap={unit === 'mg/dL' ? 300 : 16.7}
+                band={unit === 'mg/dL' ? { min: 70, max: 180, label: '70–180' } : { min: 3.9, max: 10.0, label: '3.9–10.0' }}
+                guides={unit === 'mg/dL' ? [{ y: 70, label: '၇၀' }, { y: 300, label: '၃၀၀' }] : [{ y: 3.9, label: '၃.၉' }, { y: 16.7, label: '၁၆.၇' }]}
+                series={activeSeries.map((series) => ({
+                  id: series.context,
+                  label: MEAL_LABEL[series.context],
+                  color: CONTEXT_COLOR[series.context],
+                  dashed: series.context === 'unknown',
+                  points: series.points,
+                }))}
+              />
+              <PointTable
+                rows={activeSeries.flatMap((series) =>
+                  series.points.map((point) => ({ ...point, label: MEAL_LABEL[series.context] }))
+                )}
+                valueLabel={unit}
+              />
+            </>
           ) : (
-            <Trend
-              yLabel="mmHg"
-              cap={200}
-              guides={[{ y: 180, label: 'SYS ၁၈၀' }, { y: 120, label: 'DIA ၁၂၀' }]}
-              series={[
-                { id: 'sys', label: 'အပေါ် (SYS)', color: '#3B5BF5', points: pressure.systolic },
-                { id: 'dia', label: 'အောက် (DIA)', color: '#7C93FA', points: pressure.diastolic },
-              ]}
-            />
+            <>
+              <Trend
+                yLabel="mmHg"
+                cap={200}
+                guides={[{ y: 180, label: 'SYS ၁၈၀' }, { y: 120, label: 'DIA ၁၂၀' }]}
+                series={[
+                  { id: 'sys', label: 'အပေါ် (SYS)', color: '#3B5BF5', points: pressure.systolic },
+                  { id: 'dia', label: 'အောက် (DIA)', color: '#7C93FA', points: pressure.diastolic },
+                ]}
+              />
+              <PointTable
+                rows={pressure.systolic
+                  .map((point) => ({ ...point, label: 'အပေါ် (SYS)' }))
+                  .concat(pressure.diastolic.map((point) => ({ ...point, label: 'အောက် (DIA)' })))}
+                valueLabel="mmHg"
+              />
+            </>
           )}
         </section>
       )}
@@ -383,7 +350,8 @@ function DonutChart({
         </div>
       </div>
 
-      <div className="donut-legend-grid">
+      <div className={`donut-legend-grid ${slices.some((s) => s.id === "unknown") ? "has-unknown" : ""}`}>
+
         {slices.map((slice) => (
           <div key={slice.id} className="donut-legend-card">
             <div className="donut-legend-top">
@@ -649,6 +617,34 @@ function Trend({
           <span key={item.id} className="badge" style={{ '--series': item.color } as CSSProperties}>{item.label}</span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function PointTable({ rows, valueLabel }: { rows: (ChartPoint & { label: string })[]; valueLabel: string }) {
+  const sorted = [...rows].sort((a, b) => a.t - b.t);
+  if (sorted.length === 0) return null;
+  return (
+    <div className="table-wrap chart-table sr-only">
+      <table>
+        <caption className="sr-only">{valueLabel} ဇယား</caption>
+        <thead>
+          <tr>
+            <th scope="col">အချိန်</th>
+            <th scope="col">အခြေအနေ</th>
+            <th scope="col">{valueLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row) => (
+            <tr key={`${row.id}-${row.y}-${row.t}`}>
+              <td>{dateKey(new Date(row.t))} {formatTime12(new Date(row.t))}</td>
+              <td>{row.label}</td>
+              <td>{row.y}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
