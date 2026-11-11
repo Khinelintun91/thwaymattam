@@ -440,16 +440,11 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent);
 .legend .badge::before { width: 8px; height: 8px; background: var(--series, currentColor); }
 
 .sticky-actions {
-  position: sticky;
-  bottom: calc(110px + env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: 8px;
-  margin-top: 8px;
-  padding: 10px;
-  background: var(--paper);
-  border-radius: 24px;
-  box-shadow: var(--shadow-float);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 12px;
+  margin-top: 16px;
+  padding: 4px 0 12px;
 }
 .sticky-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; white-space: nowrap; }
 .sticky-actions .btn-primary { min-height: 56px; }
@@ -916,7 +911,7 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   .add-layout { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; }
   .add-layout > .add-fields { grid-column: 1; }
   .add-layout > .preview-card { grid-column: 2; position: sticky; top: 16px; align-self: start; }
-  .add-layout > .sticky-actions { grid-column: 1 / -1; position: sticky; bottom: 16px; display: flex; justify-content: flex-end; }
+  .add-layout > .sticky-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
   .add-layout > .sticky-actions .btn { flex: 0 0 auto; min-width: 160px; }
   .home:has(.empty-state) > .quick-add { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; max-width: 640px; align-self: auto; }
   .latest-card .reading-value { font-size: 30px; }
@@ -1691,26 +1686,19 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   font-size: 12px;
 }
 
-/* Sticky Bottom Actions Bar (Thumb-friendly) */
+/* Form Action Buttons Bar (Natural flow, mobile thumb-friendly, no overlap) */
+.form-actions-bar,
 .sticky-actions-bar {
-  position: sticky;
-  bottom: calc(88px + env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
-  gap: 10px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 22px;
-  border: 1.5px solid #CBD5E1;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  z-index: 25;
-  margin-top: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 12px;
+  margin-top: 20px;
+  padding: 4px 0 12px;
 }
 
+.form-actions-bar .btn,
 .sticky-actions-bar .btn {
-  min-height: 54px;
+  min-height: 52px;
   font-size: 15px;
   font-weight: 700;
   border-radius: 16px;
@@ -1718,6 +1706,14 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
   align-items: center;
   justify-content: center;
   gap: 8px;
+  white-space: nowrap;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.form-actions-bar .btn span,
+.sticky-actions-bar .btn span {
+  white-space: nowrap;
 }
 
 .btn-save-action {
@@ -1729,13 +1725,14 @@ summary { min-height: 44px; cursor: pointer; font-weight: 700; }
 }
 
 @media (min-width: 840px) {
+  .add-layout > .form-actions-bar,
   .add-layout > .sticky-actions-bar {
     grid-column: 1 / -1;
-    position: sticky;
-    bottom: 16px;
     display: flex;
     justify-content: flex-end;
+    gap: 12px;
   }
+  .add-layout > .form-actions-bar .btn,
   .add-layout > .sticky-actions-bar .btn {
     flex: 0 0 auto;
     min-width: 160px;
